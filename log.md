@@ -3,3 +3,6 @@
 
 ## 12th May 2017
 I realised that the charge stability diagram I was plotting was all wrong. CS diagrams are in terms of the two gate voltages and not the lead potentials.
+
+## 16th May 2017
+Developing code for the Markov chain model to produce I-V for single quantum dot.
