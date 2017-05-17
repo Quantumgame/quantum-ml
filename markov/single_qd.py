@@ -1,74 +1,10 @@
 # code to model a single point quantum dot, with the leads modelled as single points under the Thomas-Fermi approximation
+from thomas_fermi import *
 
 import numpy as np
 import matplotlib.pyplot as plt
 import Queue
 import networkx as nx
-
-# Coulomb interaction matrix
-def calculate_K(E,N_dim,sigma = 1):
-	''' 
-		Calculates the K matrix based on a power law with sigma added to prevent blowup
-		E : energy scale for the self interaction, K_ij = E/(sqrt(sigma^2 + (i-j)^2)
-		N_dim : size of the interaction matrix
-		sigma : parameter to prevent blowup for self-interaction, default = 1
-	'''
-	x = np.arange(N_dim)
-	K = E/np.sqrt((x[:,np.newaxis] - x)**2 + sigma**2)
-	return K
-
-def solve_TF(mu_L1,mu_L2,N,V,K):
-	'''
-		Solves the TF equation V - mu + K n = 0 for mu_D and n along the N_D = N constraint
-		Linear system for K.size unknowns, vec(n) and mu_D 
-
-		returns mu_D,vec(n)
-	'''
-	N_dim = V.size
-
-	# build up the LHS
-	A = K
-	a1 = -np.ones(N_dim)
-	a1[0] = 0
-	a1[N_dim-1] = 0
-
-	a2 = np.ones(N_dim+1)
-	a2[0] = 0
-	a2[N_dim-1] = 0
-	a2[N_dim] = 0
-
-	A = np.concatenate((A,a1[:,np.newaxis]),axis=1)
-	A = np.concatenate((A,[a2]))
-
-        # build up the RHS
-        b = -V
-        b[0] = b[0] + mu_L1
-        b[N_dim-1] = b[N_dim-1] + mu_L2
-        b = np.concatenate((b,[N]))
-
-        x = np.linalg.solve(A,b)
-        return x[N_dim],x[:N_dim]
-
-
-# physical parameters
-# Temperature kT (eV)
-kT = 400e-6 # 4K
-
-# Model parameters
-# potential profile
-V_L1 = 0.5e-3 
-V_D =  -0.3e-3
-V_L2 = 0.5e-3 
-
-# lead voltages
-mu_L1 = 1e-3
-mu_L2 = 2e-3
-
-V = np.array([V_L1, V_D, V_L2])
-K = calculate_K(1e-3,3)
-mu_D,n = solve_TF(mu_L1, mu_L2,1,V,K)
-print mu_D
-print n
 
 
 def check_validity(v,model):
@@ -109,12 +45,13 @@ def generate_neighbours(v,model):
     valid = filter(lambda x : check_validity(x,model),[L_dagger,L,R_dagger,R])    
     return valid
 
-def fermi(E,mu,kT):
-    return 1.0/(1 + np.exp((E - mu)/kT))
+def fermi(E,kT):
+    return 1.0/(1 + np.exp(E/kT))
 
 def find_weight(u,v,physics):
     '''
         Find the weight of edge from u to v
+        Note that find_weight cannot find weight between any two vertices, it assumes that u,v are neighbours. DO NOT USE FOR FINDING WEIGHT BETWEEN ANY TWO NODES.
     '''
     (mu_L1,mu_L2,V,K,kT) = physics
     # number of electons in u state on the dot 
@@ -125,26 +62,50 @@ def find_weight(u,v,physics):
     v = np.array(v)
     diff = u - v
     # transport through right contact
-    if u[0] == 0:
+    if diff[0] == 0:
         # contact to dot
         if v[1] > u[1]:
-            weight = fermi(mu_D,mu_L2,kT)
+            weight = fermi(mu_D-mu_L2,kT)
         # dot to contact
         else:
-            weight = 1 - fermi(mu_D,mu_L2,kT)
+            weight = 1 - fermi(mu_D-mu_L2,kT)
     # transport through left contact
-    else:
+    elif diff[2] == 0:
         # contact to dot
         if v[1] > u[1]:
-            weight = fermi(mu_D,mu_L1,kT)
+            weight = fermi(mu_D-mu_L1,kT)
         # dot to contact
         else:
-            weight = 1 - fermi(mu_D,mu_L1,kT)
+            weight = 1 - fermi(mu_D-mu_L1,kT)
 
     return weight
 
+def add_battery_edges(G,physics,weight):
+    (mu_L1,mu_L2,V,K,kT) = physics
+
+    cond1 = (mu_L1 < mu_L2)
+    for u in list(G.nodes()):
+        for v in list(G.nodes()):
+            # not a battery edge since number on dot changes
+            if u[1] != v[1]:
+                pass
+            # electron passes from left to right
+            elif cond1:
+                if u[0] > v[0]:
+                    G.add_edge(u,v,weight=weight)
+                    nx.set_node_attributes(G,'battery_node',{u : 'True'})
+            # electron passes from right to left
+            else:
+                if u[0] < v[0]:
+                    G.add_edge(u,v,weight=weight)
+                    nx.set_node_attributes(G,'battery_node',{u : 'True'})
+    return G
+
+
 def generate_graph(model,physics):
     G = nx.DiGraph()
+    # set all nodes as non-battery nodes
+    nx.set_node_attributes(G,'battery_node',False)
     V = Queue.Queue()
     V.put((0,0,0))
 
@@ -157,26 +118,71 @@ def generate_graph(model,physics):
             if n not in list(G.nodes()):
                 V.put(n)
                 G.add_node(n) 
-                # put in weight information
-                # finally, Physics, Yay!
-                G.add_edge(v,n,weight=find_weight(v,n,physics))
-                G.add_edge(n,v,weight=find_weight(n,v,physics))
+            # Catch here : Put in the weight even if node exists, because weights might not be added
+            # put in weight information
+            # finally, Physics, Yay!
+            G.add_edge(v,n,weight=find_weight(v,n,physics))
+            G.add_edge(n,v,weight=find_weight(n,v,physics))
+   
+    battery_weight = 100
+    G = add_battery_edges(G,physics,battery_weight)
     return G 
 
-model = (1,1)
-physics = (mu_L1,mu_L2,V,K,kT)
-G = generate_graph(model,physics)
 
-M = nx.to_numpy_matrix(G)
-M = M/M.sum(axis=1)
-print M
+# physical parameters
+# Temperature kT (eV)
+kT = 10e-6 # 4K
 
-w,v = np.linalg.eig(M.T)
-ind = np.argwhere(np.abs(w - 1) < 1e-1).flatten()[0]
-dist = v[:,ind]/v[:,ind].sum(axis=0)
-print list(G.nodes())
-print dist
+# Model parameters
+# potential profile
+V_L1 = 5e-3 
+V_L2 = 5e-3 
 
-	
+# lead voltages
+mu_L1 = 10e-3
+mu_L2 = 11e-3
+
+
+V_D_vec = np.linspace(3e-3,5e-3,1000)
+K = calculate_K(1e-3,3)
+dist_vec = np.zeros(V_D_vec.size)
+for i in range(V_D_vec.size):
+    V_D = V_D_vec[i]
+    V = np.array([V_L1, V_D, V_L2])
+    
+    V = np.array([V_L1, V_D, V_L2])
+    K = calculate_K(1e-3,3)
+
+    model = (2,1)
+    physics = (mu_L1,mu_L2,V,K,kT)
+    G = generate_graph(model,physics)
+
+    # Adjacency matrix, caution not the Markov matrix
+    A = nx.to_numpy_matrix(G)
+    # look at this carefully
+    M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
+
+    w,v = np.linalg.eig(M)
+    ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
+    dist = v[:,ind]/v[:,ind].sum(axis=0)
+
+    # battery
+    # TODO: Find a better way to find the indices for the battery edges
+    battery_nodes = nx.get_node_attributes(G,'battery_node')
+    nodes = list(G.nodes())
+    battery_ind = []
+    for key in battery_nodes:
+        battery_ind += [nodes.index(key)]
+
+    for ind in battery_ind:
+        dist_vec[i] += dist[ind,0]
+
+print list(G.nodes(data=True))
+print list(G.edges(data=True))
+plt.figure(1)
+plt.plot(V_D_vec,np.gradient(dist_vec))
+plt.figure(2)
+nx.draw_networkx(G,with_labels=True)
+plt.show()
 
  
