@@ -52,20 +52,20 @@ def solve_TF(mu_L1,mu_L2,N,V,K):
 
 # physical parameters
 # Temperature kT (eV)
-kT = 1e-3 # 4K
+kT = 400e-6 # 4K
 
 # Model parameters
 # potential profile
-V_L1 = 1.0 
-V_D = 0
-V_L2 = 1.0 
+V_L1 = 0.5e-3 
+V_D =  -0.3e-3
+V_L2 = 0.5e-3 
 
 # lead voltages
-mu_L1 = 5
-mu_L2 = 5
+mu_L1 = 1e-3
+mu_L2 = 2e-3
 
 V = np.array([V_L1, V_D, V_L2])
-K = calculate_K(1,3)
+K = calculate_K(1e-3,3)
 mu_D,n = solve_TF(mu_L1, mu_L2,1,V,K)
 print mu_D
 print n
@@ -166,16 +166,17 @@ def generate_graph(model,physics):
 model = (1,1)
 physics = (mu_L1,mu_L2,V,K,kT)
 G = generate_graph(model,physics)
-print list(G.nodes())
-print list(G.edges(data=True))
 
 M = nx.to_numpy_matrix(G)
-M = np.nan_to_num(M/M.sum(axis=1))
+M = M/M.sum(axis=1)
 print M
 
-w,v = np.linalg.eig(M)
-print w
-print v
+w,v = np.linalg.eig(M.T)
+ind = np.argwhere(np.abs(w - 1) < 1e-1).flatten()[0]
+dist = v[:,ind]/v[:,ind].sum(axis=0)
+print list(G.nodes())
+print dist
+
 	
 
  
