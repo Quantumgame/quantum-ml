@@ -1,4 +1,3 @@
-# code to model a single point quantum dot, with the leads modelled as single points under the Thomas-Fermi approximation
 from thomas_fermi import *
 
 import numpy as np
@@ -48,37 +47,88 @@ def generate_neighbours(v,model):
 def fermi(E,kT):
     return 1.0/(1 + np.exp(E/kT))
 
-def find_weight(u,v,physics):
+def find_weight(u,v,physics,method='energy'):
     '''
         Find the weight of edge from u to v
         Note that find_weight cannot find weight between any two vertices, it assumes that u,v are neighbours. DO NOT USE FOR FINDING WEIGHT BETWEEN ANY TWO NODES.
-    '''
-    (mu_L1,mu_L2,V,K,kT) = physics
-    # number of electons in u state on the dot 
-    N = u[1]
-    mu_D,n = solve_TF(mu_L1,mu_L2,N,V,K)
-   
-    u = np.array(u)
-    v = np.array(v)
-    diff = u - v
-    # transport through right contact
-    if diff[0] == 0:
-        # contact to dot
-        if v[1] > u[1]:
-            weight = fermi(mu_D-mu_L2,kT)
-        # dot to contact
-        else:
-            weight = 1 - fermi(mu_D-mu_L2,kT)
-    # transport through left contact
-    elif diff[2] == 0:
-        # contact to dot
-        if v[1] > u[1]:
-            weight = fermi(mu_D-mu_L1,kT)
-        # dot to contact
-        else:
-            weight = 1 - fermi(mu_D-mu_L1,kT)
 
-    return weight
+        Methods to assign the edge weights, 'mu' or 'energy' depending on which picture, chemical potential or Thomas-Fermi energy is used.
+        Default is 'energy'
+
+        'hybrid' uses both pictures.
+    '''
+    if method == 'mu':
+        (mu_L1,mu_L2,V,K,kT) = physics
+        # number of electons in u state on the dot 
+        N = u[1]
+        mu_D,n = solve_TF(mu_L1,mu_L2,N,V,K)
+        
+        u = np.array(u)
+        v = np.array(v)
+        diff = u - v
+        # transport through right contact
+        if diff[0] == 0:
+            # contact to dot
+            if v[1] > u[1]:
+                weight = fermi(mu_D-mu_L2,kT)
+            # dot to contact
+            else:
+                weight = 1 - fermi(mu_D-mu_L2,kT)
+        # transport through left contact
+        elif diff[2] == 0:
+            # contact to dot
+            if v[1] > u[1]:
+                weight = fermi(mu_D-mu_L1,kT)
+            # dot to contact
+            else:
+                weight = 1 - fermi(mu_D-mu_L1,kT)
+    elif method == 'energy':
+        (mu_L1,mu_L2,V,K,kT) = physics
+        # number of electons in u state on the dot 
+        N1 = u[1]
+        mu_D1,n1 = solve_TF(mu_L1,mu_L2,N1,V,K)
+        E_TF1 = calculate_E_TF(mu_L1,mu_L2,mu_D1,n1,V,K)
+
+        N2 = v[1]
+        mu_D2,n2 = solve_TF(mu_L1,mu_L2,N2,V,K)
+        E_TF2 = calculate_E_TF(mu_L1,mu_L2,mu_D2,n2,V,K)
+
+        weight = fermi(E_TF2 - E_TF1,kT)
+
+    elif method == 'hybrid':
+        (mu_L1,mu_L2,V,K,kT) = physics
+        # number of electons in u state on the dot 
+        N1 = u[1]
+        mu_D1,n1 = solve_TF(mu_L1,mu_L2,N1,V,K)
+        E_TF1 = calculate_E_TF(mu_L1,mu_L2,mu_D1,n1,V,K)
+
+        N2 = v[1]
+        mu_D2,n2 = solve_TF(mu_L1,mu_L2,N2,V,K)
+        E_TF2 = calculate_E_TF(mu_L1,mu_L2,mu_D2,n2,V,K)
+
+        energy_weight = fermi(E_TF2 - E_TF1,kT)
+        
+        u = np.array(u)
+        v = np.array(v)
+        diff = u - v
+        # transport through right contact
+        if diff[0] == 0:
+            # contact to dot
+            if v[1] > u[1]:
+                weight = fermi(mu_D1-mu_L2,kT)
+            # dot to contact
+            else:
+                weight = 1 - fermi(mu_D1-mu_L2,kT)
+        # transport through left contact
+        elif diff[2] == 0:
+            # contact to dot
+            if v[1] > u[1]:
+                weight = fermi(mu_D1-mu_L1,kT)
+            # dot to contact
+            else:
+                weight = 1 - fermi(mu_D1-mu_L1,kT)
+        weight = weight*energy_weight
+    return weight 
 
 def add_battery_edges(G,physics,weight):
     (mu_L1,mu_L2,V,K,kT) = physics
@@ -102,7 +152,7 @@ def add_battery_edges(G,physics,weight):
     return G
 
 
-def generate_graph(model,physics):
+def generate_graph(model,physics,method):
     G = nx.DiGraph()
     # set all nodes as non-battery nodes
     nx.set_node_attributes(G,'battery_node',False)
@@ -121,68 +171,10 @@ def generate_graph(model,physics):
             # Catch here : Put in the weight even if node exists, because weights might not be added
             # put in weight information
             # finally, Physics, Yay!
-            G.add_edge(v,n,weight=find_weight(v,n,physics))
-            G.add_edge(n,v,weight=find_weight(n,v,physics))
+            G.add_edge(v,n,weight=find_weight(v,n,physics,method))
+            G.add_edge(n,v,weight=find_weight(n,v,physics,method))
    
     battery_weight = 100
     G = add_battery_edges(G,physics,battery_weight)
     return G 
 
-
-# physical parameters
-# Temperature kT (eV)
-kT = 10e-6 # 4K
-
-# Model parameters
-# potential profile
-V_L1 = 5e-3 
-V_L2 = 5e-3 
-
-# lead voltages
-mu_L1 = 10e-3
-mu_L2 = 11e-3
-
-
-V_D_vec = np.linspace(3e-3,5e-3,1000)
-K = calculate_K(1e-3,3)
-dist_vec = np.zeros(V_D_vec.size)
-for i in range(V_D_vec.size):
-    V_D = V_D_vec[i]
-    V = np.array([V_L1, V_D, V_L2])
-    
-    V = np.array([V_L1, V_D, V_L2])
-    K = calculate_K(1e-3,3)
-
-    model = (2,1)
-    physics = (mu_L1,mu_L2,V,K,kT)
-    G = generate_graph(model,physics)
-
-    # Adjacency matrix, caution not the Markov matrix
-    A = nx.to_numpy_matrix(G)
-    # look at this carefully
-    M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
-
-    w,v = np.linalg.eig(M)
-    ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
-    dist = v[:,ind]/v[:,ind].sum(axis=0)
-
-    # battery
-    # TODO: Find a better way to find the indices for the battery edges
-    battery_nodes = nx.get_node_attributes(G,'battery_node')
-    nodes = list(G.nodes())
-    battery_ind = []
-    for key in battery_nodes:
-        battery_ind += [nodes.index(key)]
-
-    for ind in battery_ind:
-        dist_vec[i] += dist[ind,0]
-
-print list(G.nodes(data=True))
-print list(G.edges(data=True))
-plt.figure(1)
-plt.plot(V_D_vec,np.gradient(dist_vec))
-plt.figure(2)
-nx.draw_networkx(G,with_labels=True)
-plt.show()
-
- 
