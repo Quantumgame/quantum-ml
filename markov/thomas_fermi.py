@@ -45,3 +45,19 @@ def solve_TF(mu_L1,mu_L2,N,V,K):
 
         x = np.linalg.solve(A,b)
         return x[N_dim],x[:N_dim]
+
+def calculate_E_TF(mu_L1,mu_L2,mu_D,n,V,K):
+    '''
+        Calculates the Thomas-Fermi energy
+        E_TF = (V - mu) n + 1/2 n K n
+        Note that it includes mu, so this is the free energy and therefore is the correct quantity that is minimized at equilibirum
+    '''
+    N_dim = V.size
+
+    # constructing the chemical potential vector, = mu_L at the leads, and mu_D inside the dot
+    mu_vec = mu_D*np.ones(N_dim)
+    mu_vec[0] = mu_L1
+    mu_vec[-1] = mu_L2
+
+    E_TF = np.sum((V-0*mu_vec)*n) + 0.5*np.sum(n*np.dot(K,n))
+    return E_TF 
