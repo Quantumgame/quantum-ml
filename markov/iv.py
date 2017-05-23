@@ -10,13 +10,13 @@ import matplotlib.pyplot as plt
 # Temperature kT (eV)
 kT = 10e-6 
 
-method = 'mu'
+method = 'energy'
 # Model parameters
 # potential profile
 V_L1 = 5e-3 
 V_L2 = 5e-3 
 
-N_points = 200
+N_points = 500
 V_D_vec = np.linspace(3e-3,5e-3,N_points)
 
 bias = 0.01e-3
@@ -24,7 +24,6 @@ bias = 0.01e-3
 mu_L1 = 10e-3
 mu_L2 = 10e-3+bias
 
-K = calculate_K(1e-3,3)
 dist_vec = np.zeros(V_D_vec.size)
 for i in range(V_D_vec.size):
     V_D = V_D_vec[i]
@@ -33,7 +32,7 @@ for i in range(V_D_vec.size):
     V = np.array([V_L1, V_D, V_L2])
     K = calculate_K(1e-3,3)
 
-    model = (9,1)
+    model = (10,1)
     physics = (mu_L1,mu_L2,V,K,kT)
     G = generate_graph(model,physics,method)
 
@@ -63,7 +62,7 @@ print list(G.edges(data=True))
 plt.figure(1)
 plt.plot(V_D_vec,dist_vec)
 plt.xlabel('Gate voltage')
-plt.ylabel('Current or Conductance')
+plt.ylabel('Current')
 plt.figure(2)
 nx.draw_networkx(G,with_labels=True)
 plt.show()

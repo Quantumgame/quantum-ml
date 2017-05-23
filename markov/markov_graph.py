@@ -174,7 +174,7 @@ def generate_graph(model,physics,method):
             G.add_edge(v,n,weight=find_weight(v,n,physics,method))
             G.add_edge(n,v,weight=find_weight(n,v,physics,method))
    
-    battery_weight = 100
+    battery_weight = 10000
     G = add_battery_edges(G,physics,battery_weight)
     return G 
 
