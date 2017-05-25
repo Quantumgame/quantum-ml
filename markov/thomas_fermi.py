@@ -49,8 +49,8 @@ def solve_TF(mu_L1,mu_L2,N,V,K):
 def calculate_E_TF(mu_L1,mu_L2,mu_D,n,V,K):
     '''
         Calculates the Thomas-Fermi energy
-        E_TF = (V - mu) n + 1/2 n K n
-        Note that it includes mu, so this is the free energy and therefore is the correct quantity that is minimized at equilibirum
+        E_TF = V n + 1/2 n K n
+        Note that it does not include mu, so this is actual energy and not the free energy 
     '''
     N_dim = V.size
 
@@ -59,5 +59,5 @@ def calculate_E_TF(mu_L1,mu_L2,mu_D,n,V,K):
     mu_vec[0] = mu_L1
     mu_vec[-1] = mu_L2
 
-    E_TF = np.sum((V-0*mu_vec)*n) + 0.5*np.sum(n*np.dot(K,n))
+    E_TF = np.sum(V*n) + 0.5*np.sum(n*np.dot(K,n))
     return E_TF 
