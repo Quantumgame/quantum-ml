@@ -6,3 +6,8 @@ I realised that the charge stability diagram I was plotting was all wrong. CS di
 
 ## 16th May 2017
 Developing code for the Markov chain model to produce I-V for single quantum dot.
+
+## 25th May 2017
+- Developed code for general thomas-fermi for N dots. The code is under ndot/lib
+- dot_classifier is a module under ndot/lib which classifies the landscape into leads, barriers and dots, not implemented
+
