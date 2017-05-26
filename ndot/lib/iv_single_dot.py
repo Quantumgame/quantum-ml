@@ -38,3 +38,4 @@ nx.draw_shell(G,with_labels=True)
 
 plt.figure(2)
 plt.plot(V_d_vec,I_vec)
+plt.show()
