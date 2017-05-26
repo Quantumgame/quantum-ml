@@ -118,7 +118,7 @@ def solve_thomas_fermi(x,V,K,mu_l,N_dot):
                 b[index_constraint + N_points] = 0
                 index_constraint += 1
 
-    print A,b
+    #print A,b
     z = np.linalg.solve(A,b)
     # return n,mu
     return z[:N_points],z[N_points:]

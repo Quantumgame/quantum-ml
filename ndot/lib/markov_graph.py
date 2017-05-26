@@ -3,7 +3,10 @@
 import numpy as np
 import Queue
 import networkx as nx
+
+#local modules
 import dot_classifier
+import thomas_fermi
 
 def check_validity(v, graph_model):
     '''
@@ -24,7 +27,7 @@ def check_validity(v, graph_model):
     cond1 = True
     num_dots = len(v) - 2
     for i in range(1,num_dots+1):
-        cond1 =  cond2 and (0 <= v[i] <= p)
+        cond1 =  cond1 and (0 <= v[i] <= p)
 
     cond2 = (abs(v[0] - v[-1]) <= q)
 
@@ -54,24 +57,28 @@ def generate_neighbours(v, graph_model):
     for i in range(1,num_dots+1):
         # 4 possible neighbours of each change in dot charge state, ld,l,rd,r 
         # the nomenclature stems from d : dagger, so ld denotes create an electron in the left and so on
-        ld = l = rd = r = v
+
+        # typecasting between arrays and tuples involved here, since the nodes are stored as tuples, whereas tuples do not support item assignment
+        ld = np.array(v)
+        l = np.array(v)
+        rd = np.array(v)
+        r = np.array(v)
 
         ld[i - 1] += 1
         ld[i] += -1 
-        neigh.append(ld)
+        neigh.append(tuple(ld))
         
         l[i - 1] += -1
         l[i] += 1 
-        neigh.append(l)
+        neigh.append(tuple(l))
         
         rd[i + 1] += 1
         rd[i] += -1 
-        neigh.append(rd)
+        neigh.append(tuple(rd))
         
-        r[i + 1] += +1
+        r[i + 1] += -1
         r[i] += 1 
-        neigh.append(r)
-
+        neigh.append(tuple(r))
     valid = filter(lambda x : check_validity(x,graph_model),neigh)    
     return valid
 
@@ -101,11 +108,11 @@ def find_weight(v,u,physics):
     # number of electons in v state on the dot 
     N_dot_1 = v[1:-1] 
     mu1,n1 = thomas_fermi.solve_thomas_fermi(x,V,K,mu_l,N_dot_1)
-    E_1 = thomas_fermicalculate_thomas_fermi_energy(V,K,n1,mu1)
+    E_1 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n1,mu1)
 
     N_dot_2 = u[1:-1] 
     mu2,n2 = thomas_fermi.solve_thomas_fermi(x,V,K,mu_l,N_dot_2)
-    E_2 = thomas_fermicalculate_thomas_fermi_energy(V,K,n2,mu2)
+    E_2 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n2,mu2)
 
     weight = fermi(E_2 - E_1,kT)
     return weight
@@ -184,4 +191,42 @@ def generate_graph(graph_model, physics):
    
     G = add_battery_edges(G,physics)
     return G 
+
+def get_current(G):
+    '''
+    Input:
+        G : graph with nodes as charge states and weights assigned, battery edges should also be present in G
+    Output:
+        current : current 
+
+    The basic idea is to create a Markov evolution matrix from the weights. The stable probability distribution is given as the nullspace of this matrix.
+
+    The current is calculated by summing over the probabilities at the beginning of the battery edges.
+    '''
+
+    # Adjacency matrix, caution not the Markov matrix
+    A = nx.to_numpy_matrix(G)
+    # look at this carefully
+    M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
+
+    w,v = np.linalg.eig(M)
+    ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
+    dist = v[:,ind]/v[:,ind].sum(axis=0)
+
+    # battery
+    # TODO: Find a better way to find the indices for the battery edges
+    battery_nodes = nx.get_node_attributes(G,'battery_node')
+    nodes = list(G.nodes())
+    battery_ind = []
+    # find the keys of the battery nodes
+    for key in battery_nodes:
+        battery_ind += [nodes.index(key)]
+
+    # calculate the current by summing over the probabities over the battery nodes 
+    current = 0
+    for ind in battery_ind:
+        current += dist[ind,0]
+
+    return current
     
+     
