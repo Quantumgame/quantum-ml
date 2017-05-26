@@ -140,12 +140,14 @@ def add_battery_edges(G,physics):
             elif cond1:
                 if u[0] > v[0]:
                     G.add_edge(u,v,weight=battery_weight)
-                    nx.set_node_attributes(G,'battery_node',{u : 'True'})
+                    nx.set_edge_attributes(G,'battery_edge',{(u,v) : True})
+                    nx.set_node_attributes(G,'battery_node',{u : True})
             # electron passes from right to left
             else:
                 if u[0] < v[0]:
                     G.add_edge(u,v,weight=battery_weight)
-                    nx.set_node_attributes(G,'battery_node',{u : 'True'})
+                    nx.set_edge_attributes(G,'battery_edge',{(u,v) : True})
+                    nx.set_node_attributes(G,'battery_node',{u : True})
     return G
 
 def generate_graph(graph_model, physics):
@@ -187,11 +189,33 @@ def generate_graph(graph_model, physics):
             # put in weight information
             # finally, Physics, Yay!
             G.add_edge(v,n,weight=find_weight(v,n,physics))
+            nx.set_edge_attributes(G,'battery_edge',{(v,n) : False})
             G.add_edge(n,v,weight=find_weight(n,v,physics))
+            nx.set_edge_attributes(G,'battery_edge',{(n,v) : False})
    
     G = add_battery_edges(G,physics)
     return G 
-
+def recalculate_weights(G,physics):
+    '''
+    Input:
+        G: Graph
+        physics : (x,V,K,mu_l,battery_weight,kT)
+    Output:
+        G : Graph G with edge weight recalculated according to new physics
+    
+    TODO: BATTERY EDGES ARE NOT RECALCULATED
+    '''
+    edges = nx.get_edge_attributes(G,'battery_edge') 
+    for key in edges:
+        # not a battery edge
+        if(edges[key] == False):
+            nx.set_edge_attributes(G,'weight',{key:find_weight(key[0],key[1],physics)})
+        # battery edge
+        else:
+            pass
+    
+    return G        
+            
 def get_current(G):
     '''
     Input:
