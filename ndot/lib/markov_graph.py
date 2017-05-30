@@ -3,6 +3,7 @@
 import numpy as np
 import Queue
 import networkx as nx
+import pdb
 
 #local modules
 import dot_classifier
@@ -215,8 +216,27 @@ def recalculate_weights(G,physics):
             pass
     
     return G        
-            
-def get_current(G):
+
+def get_battery_nodes(G):
+    '''
+    Input:
+        G :Graph
+    Output:
+        battery_ind : list of battery nodes
+    '''
+    # battery
+    # TODO: Find a better way to find the indices for the battery edges
+    battery_nodes = nx.get_node_attributes(G,'battery_node')
+    nodes = list(G.nodes())
+    battery_ind = []
+    # find the keys of the battery nodes
+    for key in battery_nodes:
+        battery_ind += [nodes.index(key)]
+
+    return battery_ind
+
+        
+def get_current(G,battery_ind):
     '''
     Input:
         G : graph with nodes as charge states and weights assigned, battery edges should also be present in G
@@ -234,22 +254,17 @@ def get_current(G):
     M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
 
     w,v = np.linalg.eig(M)
+    #pdb.set_trace()
     ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
+    #print ind
+    # dist is prob distribution
     dist = v[:,ind]/v[:,ind].sum(axis=0)
-
-    # battery
-    # TODO: Find a better way to find the indices for the battery edges
-    battery_nodes = nx.get_node_attributes(G,'battery_node')
-    nodes = list(G.nodes())
-    battery_ind = []
-    # find the keys of the battery nodes
-    for key in battery_nodes:
-        battery_ind += [nodes.index(key)]
+    #print dist 
 
     # calculate the current by summing over the probabities over the battery nodes 
     current = 0
-    for ind in battery_ind:
-        current += dist[ind,0]
+    for b_ind in battery_ind:
+        current += dist[b_ind,0]
 
     return current
     

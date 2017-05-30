@@ -16,25 +16,18 @@ def create_K_matrix(x, E_scale=1.0, sigma=1.0):
     '''
     K = E_scale/np.sqrt((x[:, np.newaxis] - x)**2 + sigma**2)
     return K
-
-def solve_thomas_fermi(x,V,K,mu_l,N_dot):
+    
+def create_A_matrix(x,V,K):
     '''
+    Convinience function
     Input:
         x    : discrete 1D grid
         V    : potential
         K    : Coulomb interaction matrix between two points
-        mu_l : (mu_L1, mu_L2) tuple with the lead potentials
-        N_dot: vector with number of electrons in each dot, can be of size 0 i.e no dot
     Output:
-        (n, mu) where
-        n    : electronic charge density as a function of x
-        mu   : chemical potential as a function of x
-               mu(x) = mu_L when x in leads
-    
-    Solves the Thomas-Fermi equation V - mu + K n = 0 along with the constraint that integral of electron density in a dot is a constant and electron density in the barrier region is zero.
+        A : matrix A used in solution of TF, A z = b 
     '''
-    #solve the equation A z = b
-    # z = (n mu)^T
+
     #set up the A matrix
     N_points = x.size
     A = np.zeros([2*N_points,2*N_points])
@@ -82,6 +75,28 @@ def solve_thomas_fermi(x,V,K,mu_l,N_dot):
                 A[index_constraint + N_points, index_constraint + N_points] = -1 
                 index_constraint += 1
 
+    return A
+
+def create_b_matrix(x,V,K,mu_l,N_dot):
+    '''
+    Convinience function
+    Input:
+        x    : discrete 1D grid
+        V    : potential
+        K    : Coulomb interaction matrix between two points
+    Output:
+        b : vector b used in solution of TF, A z = b 
+        mu_l : (mu_L1, mu_L2) tuple with the lead potentials
+        N_dot: vector with number of electrons in each dot, can be of size 0 i.e no dot
+    '''
+
+
+    N_points = x.size
+
+    mask = dot_classifier.get_mask(x,V)
+    # dictionary index by dot number, gives [dot_begin_index,dot_end_index]
+    dot_info = dot_classifier.get_dot_info(mask)
+
     # set up the RHS
     b = np.zeros(2*N_points)
     for i in range(N_points):
@@ -117,8 +132,30 @@ def solve_thomas_fermi(x,V,K,mu_l,N_dot):
                 # again, do nothing since b is already 0
                 b[index_constraint + N_points] = 0
                 index_constraint += 1
+    return b
 
-    #print A,b
+def solve_thomas_fermi(x,V,K,mu_l,N_dot):
+    '''
+    Input:
+        x    : discrete 1D grid
+        V    : potential
+        K    : Coulomb interaction matrix between two points
+        mu_l : (mu_L1, mu_L2) tuple with the lead potentials
+        N_dot: vector with number of electrons in each dot, can be of size 0 i.e no dot
+    Output:
+        (n, mu) where
+        n    : electronic charge density as a function of x
+        mu   : chemical potential as a function of x
+               mu(x) = mu_L when x in leads
+    
+    Solves the Thomas-Fermi equation V - mu + K n = 0 along with the constraint that integral of electron density in a dot is a constant and electron density in the barrier region is zero.
+    '''
+    #solve the equation A z = b
+    # z = (n mu)^T
+    N_points = x.size
+
+    A = create_A_matrix(x,V,K)
+    b = create_b_matrix(x,V,K,mu_l,N_dot)
     z = np.linalg.solve(A,b)
     # return n,mu
     return z[:N_points],z[N_points:]
