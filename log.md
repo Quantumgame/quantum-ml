@@ -11,3 +11,12 @@ Developing code for the Markov chain model to produce I-V for single quantum dot
 - Developed code for general thomas-fermi for N dots. The code is under ndot/lib
 - dot_classifier is a module under ndot/lib which classifies the landscape into leads, barriers and dots, not implemented
 
+## 29th May 2017
+I am working on building a potential landscape classifier using Thomas-Fermi. Code under dot_classifier_tf/
+Basic algorithm 
+- Solve TF for a fixed mu
+- Find the dots by looking by n
+
+Created module potential.py : will be used to create potential profiles for testing
+First stage of dot classfier with n < 0 being classified as a barrier seems to be working. Though it fails when the Coulomb interation is strong and long-ranged.
+
