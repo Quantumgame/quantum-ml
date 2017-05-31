@@ -267,5 +267,27 @@ def get_current(G,battery_ind):
         current += dist[b_ind,0]
 
     return current
+
+def get_max_prob_node(G):
+    '''
+    Input:
+        G : graph with nodes as charge states and weights assigned, battery edges should also be present in G
+    Output:
+        Node with highest occupation probability
+    '''
+    # Adjacency matrix, caution not the Markov matrix
+    A = nx.to_numpy_matrix(G)
+    # look at this carefully
+    M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
+
+    w,v = np.linalg.eig(M)
+    ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
+    # dist is prob distribution
+    dist = v[:,ind]/v[:,ind].sum(axis=0)
+    
+    max_prob_index = np.argmax(dist)
+    nodes = list(G.nodes())
+    return nodes[max_prob_index]
+    
     
      
