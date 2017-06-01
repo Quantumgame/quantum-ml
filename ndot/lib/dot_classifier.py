@@ -36,7 +36,7 @@ def get_dot_info(mask):
     dot_info = {}
     n_dot = 0
     index = 0
-    while(True):
+    while(index < len(mask)):
         try:
             index = index + mask[index:].index('d')
             dot_begin = index
