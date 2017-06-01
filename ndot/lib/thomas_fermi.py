@@ -17,7 +17,7 @@ def create_K_matrix(x, E_scale=1.0, sigma=1.0):
     K = E_scale/np.sqrt((x[:, np.newaxis] - x)**2 + sigma**2)
     return K
     
-def create_A_matrix(x,V,K):
+def create_A_matrix(x,V,K,mu_l,N_dot):
     '''
     Convinience function
     Input:
@@ -32,7 +32,8 @@ def create_A_matrix(x,V,K):
     N_points = x.size
     A = np.zeros([2*N_points,2*N_points])
 
-    mask = dot_classifier.get_mask(x,V)
+    mu = mu_l[0]
+    mask = dot_classifier.get_mask(x,V,K,mu)
     # dictionary index by dot number, gives [dot_begin_index,dot_end_index]
     dot_info = dot_classifier.get_dot_info(mask)
 
@@ -93,7 +94,8 @@ def create_b_matrix(x,V,K,mu_l,N_dot):
 
     N_points = x.size
 
-    mask = dot_classifier.get_mask(x,V)
+    mu = mu_l[0]
+    mask = dot_classifier.get_mask(x,V,K,mu)
     # dictionary index by dot number, gives [dot_begin_index,dot_end_index]
     dot_info = dot_classifier.get_dot_info(mask)
 
@@ -156,7 +158,7 @@ def solve_thomas_fermi(x,V,K,mu_l,N_dot):
     # z = (n mu)^T
     N_points = x.size
 
-    A = create_A_matrix(x,V,K)
+    A = create_A_matrix(x,V,K,mu_l,N_dot)
     b = create_b_matrix(x,V,K,mu_l,N_dot)
     z = np.linalg.solve(A,b)
     # return n,mu

@@ -164,9 +164,11 @@ def generate_graph(graph_model, physics):
     (x,V,K,mu_l,battery_weight,kT) = physics
 
     # queue used for BFS generation of the graph
-    V = Queue.Queue()
+    Q = Queue.Queue()
 
-    mask = dot_classifier.get_mask(x,V)
+    # dot classification done using the left lead potential
+    mu = mu_l[0]
+    mask = dot_classifier.get_mask(x,V,K,mu)
     # dictionary index by dot number, gives [dot_begin_index,dot_end_index]
     dot_info = dot_classifier.get_dot_info(mask)
     num_dots = len(dot_info)
@@ -174,16 +176,16 @@ def generate_graph(graph_model, physics):
     # dots + leads
     start_node =(0,) * (num_dots + 2)
     #start_node = np.zeros(num_dots + 2)
-    V.put(start_node)
+    Q.put(start_node)
 
-    while not V.empty():
-        v = V.get()
+    while not Q.empty():
+        v = Q.get()
         G.add_node(v)
         neigh = generate_neighbours(v, graph_model)
         for n in neigh:
             # non-optimal: TODO: find a better strategy
             if n not in list(G.nodes()):
-                V.put(n)
+                Q.put(n)
                 G.add_node(n)
 
             # Catch here : Put in the weight even if node exists, because weights might not be added
