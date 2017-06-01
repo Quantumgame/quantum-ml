@@ -25,5 +25,9 @@ First stage of dot classfier with n < 0 being classified as a barrier seems to b
 
 - Developed a model for a single dot potential, the dot being modelled as a parabolic potential well and the barriers being modelled as Gaussians
 
-- 
+- Machine Learning for a single dot, single IV accomplished.
+
+- Improving on the potential model, as potentials from a cylindrical wire
+
+
 
