@@ -20,3 +20,10 @@ Basic algorithm
 Created module potential.py : will be used to create potential profiles for testing
 First stage of dot classfier with n < 0 being classified as a barrier seems to be working. Though it fails when the Coulomb interation is strong and long-ranged.
 
+## 1st June 2017
+**I am trying to build a finite size single quantum dot, ML on it's IV to learn the charge states.**
+
+- Developed a model for a single dot potential, the dot being modelled as a parabolic potential well and the barriers being modelled as Gaussians
+
+- 
+

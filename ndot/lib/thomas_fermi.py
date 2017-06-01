@@ -105,6 +105,7 @@ def create_b_matrix(x,V,K,mu_l,N_dot):
     # lead constraints
     index_constraint = 0
     index_dot = -1
+
     while (index_constraint < N_points):
         if (mask[index_constraint] == 'l1'): 
             b[index_constraint + N_points] = mu_l[0]
@@ -115,6 +116,7 @@ def create_b_matrix(x,V,K,mu_l,N_dot):
         elif (mask[index_constraint] == 'b'):
             # actually do nothing since b is already 0
             b[index_constraint + N_points] = 0
+            index_constraint += 1
         else:
             index_dot += 1
             value = dot_info[index_dot]
