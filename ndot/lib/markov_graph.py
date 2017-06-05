@@ -286,10 +286,10 @@ def get_max_prob_node(G):
     ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
     # dist is prob distribution
     dist = v[:,ind]/v[:,ind].sum(axis=0)
-    
+   
     max_prob_index = np.argmax(dist)
     nodes = list(G.nodes())
-    return nodes[max_prob_index]
+    return nodes[max_prob_index],dist
     
     
      

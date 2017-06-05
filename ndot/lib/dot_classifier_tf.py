@@ -64,12 +64,12 @@ def get_mask(x,V,K,mu):
 
     # lead1
     i = 0
-    while(mask[i] != 'b' and i < len(mask)):
+    while(i < len(mask) and mask[i] != 'b'):
         mask[i] = 'l1' 
         i += 1
     # lead2
     i = len(mask) - 1
-    while(mask[i] != 'b' and i < len(mask)):
+    while(i > 0 and mask[i] != 'b'):
         mask[i] = 'l2' 
         i -= 1
 
