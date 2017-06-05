@@ -8,6 +8,7 @@ import pdb
 #local modules
 import dot_classifier
 import thomas_fermi
+import tunneling
 
 def check_validity(v, graph_model):
     '''
@@ -98,7 +99,7 @@ def find_weight(v,u,physics):
     '''
     Input:
         v : start node
-        n : end node
+        u : end node
         physics : (x,V,K,mu_l,battery_weight,kT)
 
     Output:
@@ -115,7 +116,13 @@ def find_weight(v,u,physics):
     n2,mu2 = thomas_fermi.solve_thomas_fermi(x,V,K,mu_l,N_dot_2)
     E_2 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n2,mu2)
 
-    weight = fermi(E_2 - E_1,kT)
+    simple_prob = fermi(E_2 - E_1,kT)
+    tunnel_prob = tunneling.calculate_tunnel_prob(v,u,physics,n1,mu1)
+   
+    attempt_rate = 1.0
+    #attempt_rate = tunneling.calculate_attempt_rate(v,u,physics,n1,mu1)
+    
+    weight = attempt_rate*tunnel_prob*simple_prob
     return weight
     
 def add_battery_edges(G,physics):
@@ -256,7 +263,6 @@ def get_current(G,battery_ind):
     M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
 
     w,v = np.linalg.eig(M)
-    #pdb.set_trace()
     ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
     #print ind
     # dist is prob distribution
