@@ -29,5 +29,11 @@ First stage of dot classfier with n < 0 being classified as a barrier seems to b
 
 - Improving on the potential model, as potentials from a cylindrical wire
 
+- Could not include tunneling
+
+### 6th June 2017
+
+Wrote a DNN network, works with 99% accuracy with under a minute runtime.
+Network structure was [6,12,6]
 
 
