@@ -17,13 +17,15 @@ def create_K_matrix(x, E_scale=1.0, sigma=1.0):
     K = E_scale/np.sqrt((x[:, np.newaxis] - x)**2 + sigma**2)
     return K
     
-def create_A_matrix(x,V,K,mu_l,N_dot):
+def create_A_matrix(x,V,K,mu_l,N_dot,mask,dot_info):
     '''
     Convinience function
     Input:
         x    : discrete 1D grid
         V    : potential
         K    : Coulomb interaction matrix between two points
+        mask : array specifying the nature of each point 'l1','d','b' or 'l2'
+        dot_info : information about number of dots and their start and end points
     Output:
         A : matrix A used in solution of TF, A z = b 
     '''
@@ -31,12 +33,6 @@ def create_A_matrix(x,V,K,mu_l,N_dot):
     #set up the A matrix
     N_points = x.size
     A = np.zeros([2*N_points,2*N_points])
-
-    mu = mu_l[0]
-    mask = dot_classifier.get_mask(x,V,K,mu)
-    # dictionary index by dot number, gives [dot_begin_index,dot_end_index]
-    dot_info = dot_classifier.get_dot_info(mask)
-
 
     # top left half for n
     for i in range(N_points):
@@ -78,13 +74,15 @@ def create_A_matrix(x,V,K,mu_l,N_dot):
 
     return A
 
-def create_b_matrix(x,V,K,mu_l,N_dot):
+def create_b_matrix(x,V,K,mu_l,N_dot,mask,dot_info):
     '''
     Convinience function
     Input:
         x    : discrete 1D grid
         V    : potential
         K    : Coulomb interaction matrix between two points
+        mask : array specifying the nature of each point 'l1','d','b' or 'l2'
+        dot_info : information about number of dots and their start and end points
     Output:
         b : vector b used in solution of TF, A z = b 
         mu_l : (mu_L1, mu_L2) tuple with the lead potentials
@@ -94,10 +92,6 @@ def create_b_matrix(x,V,K,mu_l,N_dot):
 
     N_points = x.size
 
-    mu = mu_l[0]
-    mask = dot_classifier.get_mask(x,V,K,mu)
-    # dictionary index by dot number, gives [dot_begin_index,dot_end_index]
-    dot_info = dot_classifier.get_dot_info(mask)
 
     # set up the RHS
     b = np.zeros(2*N_points)
@@ -130,7 +124,7 @@ def create_b_matrix(x,V,K,mu_l,N_dot):
             # now the number of electrons in a dot is fixed constraint has been added
             index_constraint += 1
 
-            # add the mu is same over the dot constraint
+            # add the 'mu is same over the dot' constraint
             # note that there are only dot_size - 1 constraints of this type
             for j in range(dot_size-1): 
                 # again, do nothing since b is already 0
@@ -157,12 +151,36 @@ def solve_thomas_fermi(x,V,K,mu_l,N_dot):
     #solve the equation A z = b
     # z = (n mu)^T
     N_points = x.size
-
-    A = create_A_matrix(x,V,K,mu_l,N_dot)
-    b = create_b_matrix(x,V,K,mu_l,N_dot)
+    
+    mask = dot_classifier.get_mask(x,V,K,mu_l[0])
+    # dictionary index by dot number, gives [dot_begin_index,dot_end_index]
+    dot_info = dot_classifier.get_dot_info(mask)
+    A = create_A_matrix(x,V,K,mu_l,N_dot,mask,dot_info)
+    b = create_b_matrix(x,V,K,mu_l,N_dot,mask,dot_info)
     z = np.linalg.solve(A,b)
+
+    n,mu = z[:N_points],z[N_points:]
+
+    # trying out one iteration to improve the island definition
+    # mu_new as average over the dot potentials
+    #mu_new = mu_l[0]
+    #for i in range(len(dot_info)):
+    #    mu_new += mu[dot_info[i][0]] 
+    #mu_new = (1.0/(len(dot_info) + 1))*mu_new
+
+    #mask = dot_classifier.get_mask(x,V,K,mu_new)
+    ## dictionary index by dot number, gives [dot_begin_index,dot_end_index]
+    #dot_info = dot_classifier.get_dot_info(mask)
+    # 
+    #
+    #A = create_A_matrix(x,V,K,mu_l,N_dot,mask,dot_info)
+    #b = create_b_matrix(x,V,K,mu_l,N_dot,mask,dot_info)
+    #z = np.linalg.solve(A,b)
+
+    #n,mu = z[:N_points],z[N_points:]
+
     # return n,mu
-    return z[:N_points],z[N_points:]
+    return n,mu
      
 def calculate_thomas_fermi_energy(V,K,n,mu):
     '''
