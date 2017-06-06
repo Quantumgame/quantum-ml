@@ -9,6 +9,7 @@ import pdb
 import dot_classifier
 import thomas_fermi
 import tunneling
+import rank_nullspace
 
 def check_validity(v, graph_model):
     '''
@@ -117,7 +118,8 @@ def find_weight(v,u,physics):
     E_2 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n2,mu2)
 
     simple_prob = fermi(E_2 - E_1,kT)
-    tunnel_prob = tunneling.calculate_tunnel_prob(v,u,physics,n1,mu1)
+    tunnel_prob = 1.0
+    #tunnel_prob = tunneling.calculate_tunnel_prob(v,u,physics,n1,mu1)
    
     attempt_rate = 1.0
     #attempt_rate = tunneling.calculate_attempt_rate(v,u,physics,n1,mu1)
@@ -244,6 +246,23 @@ def get_battery_nodes(G):
 
     return battery_ind
 
+def get_prob_dist(M):
+    '''
+    Input:
+        M : matrix
+    Output:
+        dist : prob normalised nullspace vector of M
+    '''
+    nullspace = rank_nullspace.nullspace(M,rtol=1e-5)  
+    if (nullspace.shape[1] > 0):
+        #non-trivial nullspace exists for M
+        # dist is prob distribution
+        dist = nullspace[:,0]/nullspace[:,0].sum(axis=0)
+    else:
+        #nullspace is trivial, in this case there is no stable prob. distribution,
+        #In case raised, try changing the rtol parameter
+        raise ValueError('Nullspace of Markov matrix is trivial. No probability distribution exists')
+    return dist
         
 def get_current(G,battery_ind):
     '''
@@ -262,12 +281,7 @@ def get_current(G,battery_ind):
     # look at this carefully
     M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
 
-    w,v = np.linalg.eig(M)
-    ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
-    #print ind
-    # dist is prob distribution
-    dist = v[:,ind]/v[:,ind].sum(axis=0)
-    #print dist 
+    dist = get_prob_dist(M)
 
     # calculate the current by summing over the probabities over the battery nodes 
     current = 0
@@ -288,10 +302,10 @@ def get_max_prob_node(G):
     # look at this carefully
     M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
 
-    w,v = np.linalg.eig(M)
-    ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
-    # dist is prob distribution
-    dist = v[:,ind]/v[:,ind].sum(axis=0)
+    #w,v = np.linalg.eig(M)
+    #ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
+    
+    dist = get_prob_dist(M)
    
     max_prob_index = np.argmax(dist)
     nodes = list(G.nodes())
