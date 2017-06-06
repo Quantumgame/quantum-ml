@@ -302,9 +302,6 @@ def get_max_prob_node(G):
     # look at this carefully
     M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
 
-    #w,v = np.linalg.eig(M)
-    #ind = np.argwhere(np.abs(w) < 1e-1).flatten()[0]
-    
     dist = get_prob_dist(M)
    
     max_prob_index = np.argmax(dist)
