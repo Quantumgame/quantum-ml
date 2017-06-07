@@ -39,11 +39,11 @@ def calculate_tunnel_prob(v,u,physics,n,mu):
     if (index_electron_to > index_electron_from):
         #left to right transfer
         #from dot/lead is to the left of the barrier
-        mu_e = mu[bar_info[bar_index][0] - 1]
+        mu_e = mu[bar_info[bar_index] - 1]
     else:
         #right to left transfer
         #from dot/lead is to the right of the barrier
-        mu_e = mu[bar_info[bar_index][1] + 1]
+        mu_e = mu[bar_info[bar_index] + 1]
     
     # integral
     bar_begin = bar_info[bar_index][0]
@@ -80,7 +80,6 @@ def calculate_attempt_rate(v,u,physics,n,mu):
     lead_info = dot_classifier.get_lead_info(mask)
 
 
-
     if index_electron_from == 0 or index_electron_from == (len(u) - 1): 
         #transport from leads
         attempt_rate = 1e-3
@@ -88,12 +87,12 @@ def calculate_attempt_rate(v,u,physics,n,mu):
         u[index_electron_from] -= 1
         N_dot_1 = u[1:-1] 
         n1,mu1 = thomas_fermi.solve_thomas_fermi(x,V,K,mu_l,N_dot_1)
-        E_1 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n1,mu1)
+        E_1 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n1)
 
         dot_index = index_electron_from - 1
         dot_begin = dot_info[dot_index][0]
         dot_end = dot_info[dot_index][1]
-        attempt_rate = np.sqrt(mu[dot_begin] - mu1[dot_begin])/(dot_end - dot_begin) 
+        attempt_rate = np.sqrt(mu[dot_index] - mu1[dot_index])/(dot_end - dot_begin) 
 
     return attempt_rate
     

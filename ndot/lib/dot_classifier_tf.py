@@ -2,7 +2,7 @@
 
 import numpy as np
 
-def create_K_matrix(x, E_scale=1.0, sigma=1.0):
+def create_K_matrix(x, E_scale=1.0, sigma=1.0,x_0 = 1.0 ):
     '''
     Input: 
         x : discrete 1D grid
@@ -13,7 +13,8 @@ def create_K_matrix(x, E_scale=1.0, sigma=1.0):
 
     K(x1,x2) = E_scale / sqrt((x1 - x2)^2 + sigma^2)
     '''
-    K = E_scale/np.sqrt((x[:, np.newaxis] - x)**2 + sigma**2)
+    r = np.abs(x[:,np.newaxis] - x)
+    K = E_scale/np.sqrt(r**2 + sigma**2)*np.exp(-r/x_0)
     return K
 
 def solve_thomas_fermi_fixed_mu(x,V,K,mu):
@@ -45,7 +46,25 @@ def classify_n(n,tol=1e-1):
         return 'b'
     else:
         return 'd'
+def add_leads(mask):
+    '''
+    Input:
+    mask :  prelim mask with only 'b' or 'd'
+    Output:
+    mask : new mask in which the first and last islands are labelled as 'l1' and 'l2'
+    '''
+    # lead1
+    i = 0
+    while(i < len(mask) and mask[i] != 'b'):
+        mask[i] = 'l1' 
+        i += 1
+    # lead2
+    i = len(mask) - 1
+    while(i > 0 and mask[i] != 'b'):
+        mask[i] = 'l2' 
+        i -= 1
 
+    return mask
 def get_mask(x,V,K,mu):
     '''
     Input:
@@ -61,17 +80,7 @@ def get_mask(x,V,K,mu):
     mask = map(classify_n,n)
 
     # the mask needs to be brought into a standard form, where the points to left of the first barrier and to the right barrier aree the leads
-
-    # lead1
-    i = 0
-    while(i < len(mask) and mask[i] != 'b'):
-        mask[i] = 'l1' 
-        i += 1
-    # lead2
-    i = len(mask) - 1
-    while(i > 0 and mask[i] != 'b'):
-        mask[i] = 'l2' 
-        i -= 1
+    mask = add_leads(mask)
 
     return mask
 

@@ -3,7 +3,7 @@
 import numpy as np
 import dot_classifier
 
-def create_K_matrix(x, E_scale=1.0, sigma=1.0):
+def create_K_matrix(x, E_scale=1.0, sigma=1.0, x_0 = 1.0):
     '''
     Input: 
         x : discrete 1D grid
@@ -14,10 +14,11 @@ def create_K_matrix(x, E_scale=1.0, sigma=1.0):
 
     K(x1,x2) = E_scale / sqrt((x1 - x2)^2 + sigma^2)
     '''
-    K = E_scale/np.sqrt((x[:, np.newaxis] - x)**2 + sigma**2)
+    r = np.abs(x[:,np.newaxis] - x)
+    K = E_scale/np.sqrt(r**2 + sigma**2)*np.exp(-r/x_0)
     return K
     
-def create_A_matrix(x,V,K,mu_l,N_dot,mask,dot_info):
+def create_A_matrix(x,V,K,mu_l,N_dot,mask,dot_info,lead_info):
     '''
     Convinience function
     Input:
@@ -31,50 +32,47 @@ def create_A_matrix(x,V,K,mu_l,N_dot,mask,dot_info):
     '''
 
     #set up the A matrix
-    N_points = x.size
-    A = np.zeros([2*N_points,2*N_points])
+    N_grid = len(x)
+    # 2 are leads
+    N_D = len(dot_info)
+    N_islands = N_D + 2
+   
+    N_bar = len(filter(lambda x: x == 'b',mask))
+    N_A = N_grid + N_islands + N_bar
+    A = np.zeros([N_A,N_A])
 
-    # top left half for n
-    for i in range(N_points):
-        for j in range(N_points):
-            A[i,j]  = K[i,j]
-    # top right half for the chemical potentials
-    for i in range(N_points):
-        A[i,i + N_points] = -1
+    A[:N_grid,:N_grid] = K
+    # bottom left part
+    B = np.zeros((N_D,N_grid))
+    # constraint for sum of electron density over a dot
+    for i in range(N_D):
+        B[i,dot_info[i][0]:dot_info[i][1] + 1] = 1
 
-    # for leads and barrier
-    # add the N_points number of constraints, index_constraint keeps track of number of constraint added
-    index_constraint = 0
-    index_dot = -1
-    while (index_constraint < N_points):
-        if (mask[index_constraint] == 'l1' or mask[index_constraint] == 'l2'):
-            A[index_constraint + N_points,index_constraint + N_points] = 1
-            index_constraint += 1
-        elif(mask[index_constraint] == 'b'):
-            A[index_constraint+N_points,index_constraint] = 1
-            index_constraint += 1
-        else:
-            # mask is a dot
-            index_dot += 1
-            value = dot_info[index_dot]
-            dot_begin = value[0]
-            dot_end = value[1]
-            dot_size = dot_end - dot_begin + 1
-            for j in range(dot_size):
-                A[index_constraint + N_points, dot_begin + j] = 1   
-            # now the number of electrons in a dot is fixed constraint has been added
-            index_constraint += 1
+    # set the sum and mu_dot constraint equations
+    A[N_grid:N_grid + N_D,:N_grid] = B
+    A[:N_grid,N_grid:N_grid + N_D] = -B.T
 
-            # add the mu is same over the dot constraint
-            # note that there are only dot_size - 1 constraints of this type
-            for j in range(dot_size-1): 
-                A[index_constraint + N_points, index_constraint + N_points - 1] = 1 
-                A[index_constraint + N_points, index_constraint + N_points] = -1 
-                index_constraint += 1
-
+    for i in range(len(lead_info)):
+        # sum over leads
+        A[N_grid + N_D + i,lead_info[i][0]:lead_info[i][1] + 1] = 1
+        # minus the unkown electron number on the leads
+        A[N_grid + N_D + i,N_grid + N_D + i] = -1
+  
+    # barrier lagrange multiplier unknowns
+    bar_constraint = 0
+    for i in range(len(mask)):
+        if mask[i] == 'b':
+            A[i,N_grid + N_islands + bar_constraint] = -1
+            bar_constraint += 1
+    # barrier n = 0
+    bar_constraint = 0
+    for i in range(len(mask)): 
+        if mask[i] == 'b':
+            A[N_grid + N_islands + bar_constraint,i] = 1 
+            bar_constraint += 1
     return A
 
-def create_b_matrix(x,V,K,mu_l,N_dot,mask,dot_info):
+def create_b_matrix(x,V,K,mu_l,N_dot,mask,dot_info,lead_info):
     '''
     Convinience function
     Input:
@@ -83,53 +81,30 @@ def create_b_matrix(x,V,K,mu_l,N_dot,mask,dot_info):
         K    : Coulomb interaction matrix between two points
         mask : array specifying the nature of each point 'l1','d','b' or 'l2'
         dot_info : information about number of dots and their start and end points
-    Output:
-        b : vector b used in solution of TF, A z = b 
+        lead_info : information about leads and their start and end points
         mu_l : (mu_L1, mu_L2) tuple with the lead potentials
         N_dot: vector with number of electrons in each dot, can be of size 0 i.e no dot
+    Output:
+        b : vector b used in solution of TF, A z = b 
     '''
-
-
-    N_points = x.size
-
+    N_grid = len(x)
+    # 2 are leads
+    N_D = len(dot_info)
+    N_islands = N_D + 2
+    N_bar = len(filter(lambda x: x == 'b',mask))
+    
+    N_A = N_grid + N_islands + N_bar
 
     # set up the RHS
-    b = np.zeros(2*N_points)
-    for i in range(N_points):
-        b[i] = -V[i]
+    b = np.zeros(N_A)
+    b[:N_grid] = -V
 
-    # lead constraints
-    index_constraint = 0
-    index_dot = -1
+    # lead potentials on the RHS
+    # notice the all essential +=
+    for i in range(len(lead_info)):
+        b[lead_info[i][0]:lead_info[i][1] + 1] += mu_l[i] 
 
-    while (index_constraint < N_points):
-        if (mask[index_constraint] == 'l1'): 
-            b[index_constraint + N_points] = mu_l[0]
-            index_constraint += 1
-        elif (mask[index_constraint] == 'l2'):
-            b[index_constraint + N_points] =  mu_l[1]
-            index_constraint += 1
-        elif (mask[index_constraint] == 'b'):
-            # actually do nothing since b is already 0
-            b[index_constraint + N_points] = 0
-            index_constraint += 1
-        else:
-            index_dot += 1
-            value = dot_info[index_dot]
-            dot_begin = value[0]
-            dot_end = value[1]
-            dot_size = dot_end - dot_begin + 1
-            for j in range(dot_size):
-                b[index_constraint + N_points] = N_dot[index_dot]   
-            # now the number of electrons in a dot is fixed constraint has been added
-            index_constraint += 1
-
-            # add the 'mu is same over the dot' constraint
-            # note that there are only dot_size - 1 constraints of this type
-            for j in range(dot_size-1): 
-                # again, do nothing since b is already 0
-                b[index_constraint + N_points] = 0
-                index_constraint += 1
+    b[N_grid:N_grid+N_D] = N_dot
     return b
 
 def solve_thomas_fermi(x,V,K,mu_l,N_dot):
@@ -150,39 +125,23 @@ def solve_thomas_fermi(x,V,K,mu_l,N_dot):
     '''
     #solve the equation A z = b
     # z = (n mu)^T
-    N_points = x.size
-    
-    mask = dot_classifier.get_mask(x,V,K,mu_l[0])
+    N_grid = len(x)
+   
+    mu_avg = 0.5*(mu_l[0] + mu_l[1])
+    mask = dot_classifier.get_mask(x,V,K,mu_avg)
     # dictionary index by dot number, gives [dot_begin_index,dot_end_index]
     dot_info = dot_classifier.get_dot_info(mask)
-    A = create_A_matrix(x,V,K,mu_l,N_dot,mask,dot_info)
-    b = create_b_matrix(x,V,K,mu_l,N_dot,mask,dot_info)
+    lead_info = dot_classifier.get_lead_info(mask)
+    
+    A = create_A_matrix(x,V,K,mu_l,N_dot,mask,dot_info,lead_info)
+    b = create_b_matrix(x,V,K,mu_l,N_dot,mask,dot_info,lead_info)
     z = np.linalg.solve(A,b)
 
-    n,mu = z[:N_points],z[N_points:]
-
-    # trying out one iteration to improve the island definition
-    # mu_new as average over the dot potentials
-    #mu_new = mu_l[0]
-    #for i in range(len(dot_info)):
-    #    mu_new += mu[dot_info[i][0]] 
-    #mu_new = (1.0/(len(dot_info) + 1))*mu_new
-
-    #mask = dot_classifier.get_mask(x,V,K,mu_new)
-    ## dictionary index by dot number, gives [dot_begin_index,dot_end_index]
-    #dot_info = dot_classifier.get_dot_info(mask)
-    # 
-    #
-    #A = create_A_matrix(x,V,K,mu_l,N_dot,mask,dot_info)
-    #b = create_b_matrix(x,V,K,mu_l,N_dot,mask,dot_info)
-    #z = np.linalg.solve(A,b)
-
-    #n,mu = z[:N_points],z[N_points:]
-
-    # return n,mu
+    # return the electron density and the dot chemical potentials
+    n,mu = z[:N_grid],z[N_grid:N_grid + len(dot_info)]
     return n,mu
      
-def calculate_thomas_fermi_energy(V,K,n,mu):
+def calculate_thomas_fermi_energy(V,K,n):
     '''
     Input: 
         V : potential profile

@@ -90,12 +90,12 @@ def get_lead_info(mask):
     lead_info = {}
     l1_start = mask.index('l1')
     # clever way to find the end
-    l1_end = len(mask) - mask[::-1].index('l1')
+    l1_end = len(mask) - mask[::-1].index('l1') - 1
     lead_info[0] = [l1_start,l1_end]
 
     l2_start = mask.index('l2')
     # clever way to find the end
-    l2_end = len(mask) - mask[::-1].index('l2')
+    l2_end = len(mask) - mask[::-1].index('l2') - 1
     lead_info[1] = [l2_start,l2_end]
 
     return lead_info
