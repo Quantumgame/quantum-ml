@@ -111,18 +111,19 @@ def find_weight(v,u,physics):
     # number of electons in v state on the dot 
     N_dot_1 = v[1:-1] 
     n1,mu1 = thomas_fermi.solve_thomas_fermi(x,V,K,mu_l,N_dot_1)
-    E_1 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n1)
+    E_1 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n1,mu1,N_dot_1)
 
     N_dot_2 = u[1:-1] 
     n2,mu2 = thomas_fermi.solve_thomas_fermi(x,V,K,mu_l,N_dot_2)
-    E_2 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n2)
+    E_2 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n2,mu2,N_dot_2)
 
+    tunnel_prob = tunneling.calculate_tunnel_prob(v,u,physics,n1,mu1)
     simple_prob = fermi(E_2 - E_1,kT)
-    tunnel_prob = 1.0
-    #tunnel_prob = tunneling.calculate_tunnel_prob(v,u,physics,n1,mu1)
-   
-    attempt_rate = 1.0
-    #attempt_rate = tunneling.calculate_attempt_rate(v,u,physics,n1,mu1)
+    #tunnel_prob = 1
+
+    attempt_rate = tunneling.calculate_attempt_rate(v,u,physics,n1,mu1)
+    attempt_rate *= 1000
+    #attempt_rate = 1
     
     weight = attempt_rate*tunnel_prob*simple_prob
     return weight
@@ -253,7 +254,7 @@ def get_prob_dist(M):
     Output:
         dist : prob normalised nullspace vector of M
     '''
-    nullspace = rank_nullspace.nullspace(M,rtol=1e-5)  
+    nullspace = rank_nullspace.nullspace(M,rtol=1e-9)  
     if (nullspace.shape[1] > 0):
         #non-trivial nullspace exists for M
         # dist is prob distribution

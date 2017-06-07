@@ -139,21 +139,23 @@ def solve_thomas_fermi(x,V,K,mu_l,N_dot):
 
     # return the electron density and the dot chemical potentials
     n,mu = z[:N_grid],z[N_grid:N_grid + len(dot_info)]
+    # also add the lead chemical potentials to simplify further calculations
+    mu = np.concatenate(([mu_l[0]],mu,[mu_l[1]]))
     return n,mu
      
-def calculate_thomas_fermi_energy(V,K,n):
+def calculate_thomas_fermi_energy(V,K,n,mu,N_dot):
     '''
     Input: 
         V : potential profile
         K : Coulomb interaction matrix 
         n : electorn density
-        mu : chemical potenial profile, includes leads and barriers as well
+        mu : chemical potenial profile, includes leads and dot potentials 
     Output:
         E : Thomas-Fermi energy
 
     E = V n + 1/2 n K n
     '''
-    E = np.sum(V*n) + 0.5 * np.sum(n*np.dot(K,n))
+    E = np.sum(V*n) + 0.5 * np.sum(n*np.dot(K,n.T))
     return E
 
 
