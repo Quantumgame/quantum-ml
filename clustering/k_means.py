@@ -3,9 +3,12 @@ import numpy as np
 import random
 
 def cluster_points(X, mu):
+
+    # x/y ratio
+    eta = 2
     clusters = {}
     for x in X:
-        bestmukey = min([(i[0], abs(5*(x[0]-mu[i[0]][0])**2 + 5*(x[1]-mu[i[0]][1])**2)) \
+        bestmukey = min([(i[0], abs(eta*(x[0]-mu[i[0]][0])**2 + (x[1]-mu[i[0]][1])**2)) \
     for i in enumerate(mu)], key=lambda t:t[1])[0]
         try:
             clusters[bestmukey].append(x)
@@ -38,13 +41,14 @@ def find_centers(X, K):
 
 def init_board(N):
     X = np.array([(random.uniform(-1, 1), random.uniform(-1, 1)) for i in range(N)])
-    return X
+    return X 
 
-def gauss(x,mean=0.0,stddev=0.02,peak=1.0):
+def gauss(x,mean=0.0,stddev=0.03,peak=1.0):
     return peak*np.exp(-(x-mean)**2/(2*stddev**2))
     
 def init_dots(N,n_bar):
-    bar_centers = np.random.rand(n_bar) 
+    # limiting the centres to 0.25,0.75
+    bar_centers = 0.25+0.5*np.random.rand(n_bar) 
     bar_heights = np.random.rand(n_bar)
     x = np.linspace(0,1,N)
     X = np.zeros([N,2])
