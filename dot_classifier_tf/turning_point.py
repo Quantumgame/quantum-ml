@@ -1,8 +1,10 @@
 # find turning point routine
 # classifies a given potential grid, into leads and dots given the lead potentials and the dot potentials
+import numpy as np
 
 def find_turning_points(V,mu_l,mu_d):
     '''
+    Convinience Function
     Input
     V : Potential Profile 
     mu_l : lead potentials
@@ -61,3 +63,33 @@ def find_turning_points(V,mu_l,mu_d):
             n_index_dot += 1
         
     return lead_info,dot_info
+
+def get_mask_and_info(V,mu_l,mu_d):
+    '''
+    Input:
+    V : Potential Profile 
+    mu_l : lead potentials
+    mu_d : dot potentials
+    Output
+    mask : : array of size len(V) with each point labelled as 'l1','l2','b' or 'd'
+    lead_info : dictionary indexed by lead no (1/2) with value [starting_point,end_point]
+    dot_info : dictionary of size len(mu_d) with value [starting_point,end_point]
+    '''
+    
+    lead_info,dot_info = find_turning_points(V,mu_l,mu_d)
+    # set all points first as barriers to avoid setting them later
+    mask = ["b"]*len(V)
+    # then add the leads and dots from lead_info and dot_info
+    
+    for i in range(len(lead_info)):
+        lead_char  = "l" + str(i+1)
+        for j in range(lead_info[i][0],lead_info[i][1]+1):
+            mask[j] = lead_char
+    for i in range(len(dot_info)):
+        for j in range(dot_info[i][0],dot_info[i][1]+1):
+            mask[j] = 'd'
+    
+    return mask,lead_info,dot_info
+
+    
+    
