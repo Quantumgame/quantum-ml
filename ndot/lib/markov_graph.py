@@ -6,10 +6,12 @@ import networkx as nx
 import pdb
 
 #local modules
-import dot_classifier
 import thomas_fermi
 import tunneling
 import rank_nullspace
+import iterative_dot_classifier
+import dot_classifier
+
 
 def check_validity(v, graph_model):
     '''
@@ -110,11 +112,11 @@ def find_weight(v,u,physics):
 
     # number of electons in v state on the dot 
     N_dot_1 = v[1:-1] 
-    n1,mu1 = thomas_fermi.solve_thomas_fermi(x,V,K,mu_l,N_dot_1)
+    n1,mu1 = iterative_dot_classifier.solve_thomas_fermi_iter(x,V,K,mu_l,N_dot_1)
     E_1 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n1,mu1,N_dot_1)
 
     N_dot_2 = u[1:-1] 
-    n2,mu2 = thomas_fermi.solve_thomas_fermi(x,V,K,mu_l,N_dot_2)
+    n2,mu2 = iterative_dot_classifier.solve_thomas_fermi_iter(x,V,K,mu_l,N_dot_2)
     E_2 = thomas_fermi.calculate_thomas_fermi_energy(V,K,n2,mu2,N_dot_2)
 
     tunnel_prob = tunneling.calculate_tunnel_prob(v,u,physics,n1,mu1)

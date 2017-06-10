@@ -1,7 +1,6 @@
 # thomas fermi functions
 import numpy as np
 import turning_point
-reload(turning_point)
 
 def create_K_matrix(x, E_scale=1.0, sigma=1.0, x_0 = 1.0):
     '''
