@@ -79,3 +79,19 @@ def single_dot_V_x_wire(x,d,b1,b2):
     V += wire_profile(x,b2)
     
     return V
+
+def V_x_wire(x,list_b):
+    '''
+    Input:
+    x : 1d linear grid
+    list_b : list of gate parameters as (V,mu,h,rho) where V(x) = V*ln(sqrt(h^2 + x^2)/rho)
+    
+    Output:
+    V(x) : potential profile
+    '''
+    
+    V = np.zeros(len(x))
+    for i in range(len(list_b)): 
+        V += wire_profile(x,list_b[i])
+        
+    return V
