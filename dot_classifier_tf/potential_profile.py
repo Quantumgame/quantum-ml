@@ -8,7 +8,7 @@ def wire_profile(x,(peak,mean,h,rho)):
     '''
     V(x-mean) = peak * log(sqrt(h^2 + x^2)/rho)
     '''
-    return peak*np.log((1.0)/(rho)*np.sqrt((x-mean)**2 + h**2))
+    return peak*np.log((1.0/(rho))*np.sqrt((x-mean)**2 + h**2))
 
 def single_dot_V_x_gauss(x,d,b1,b2):
     '''
