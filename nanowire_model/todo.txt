@@ -1,0 +1,13 @@
+# Todo for 11th June 2017
+[y] : Decide on a mask definition 
+[y] : Write associated functions for working with the mask. Is Mask class a good idea?
+[3] : Write a iterative thomas_fermi solver 
+[4] : Write a markov_graph class to work with starting points other than 0.
+[5] : Fix a single dot potential landscape and get the IV working on it. The important point here is to FIX the dot potential and get the code running around it.
+[6] : Create IV for single dot with upto 5 electrons.
+[7] : Create IV for a single dot with variable dot size with upto 5 electrons.
+[8] : Create IV for a single dot with varible barrier heights with upto 5 electrons.
+[9] : Create a charge stability diagram for 2 dots.
+[10] : Build a DNN classifier to work with data from [7],[8],[9]. Computationally [7] and [8] are similar since the output is a single charge state. Slight modifications will be necessary to work with [9]. 
+
+TIL : multiple constructors are not allowed in python.
