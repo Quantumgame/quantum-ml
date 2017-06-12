@@ -7,7 +7,7 @@ class Mask:
 
     mask is a list of the size of the x-grid which labels each points as 'l' (lead), 'b' (barrier) and 'd' (dot). This is a lower level data structure that is NOT used for interfacing with other modules.
 
-    mask_info is a dictionary which stores the same info as mask but in processed form. It has keys as 'l0','l1' (leads), 'bi' (barriers)(i = 0,1,2,...) and 'di' (dots)( i = 0,1,2,...). The key values are 2-tuples (start_index,end_index) which starting for the index in x-grid at which the feature begins and ends. (Note that the end is included in end_end)
+    mask_info is a dictionary which stores the same info as mask but in processed form. It has keys as 'l0','l1' (leads), 'bi' (barriers)(i = 0,1,2,...) and 'di' (dots)( i = 0,1,2,...). The key values are 2-tuples (start_index,end_index) which starting for the index in x-grid at which the feature begins and ends. (Note that the end is included in end)
 
     '''
 

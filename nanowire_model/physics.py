@@ -17,16 +17,17 @@ class Physics():
     sigma    : softening paramter of the matrix, used in calculating the K matrix
     K(x,x')  : 2D matrix for storing the interaction energy between points x and x',
     mu_l     : (mu_left,mu_right) 2-tuple for storing the lead potentials
+    battery_weight : rate for transport throught a battery, set to a high number > 1000
     '''
 
     def __init__(self,physics):
         '''
         Input:
-            physics = (E_scale,dx_scale,kT,x,V,K_onsite,sigma,mu_l)
+            physics = (E_scale,dx_scale,kT,x,V,K_onsite,sigma,mu_l,battery_weight)
         Output
             None
         '''
-        (E_scale,dx_scale,kT,x,V,K_onsite,sigma,mu_l) = physics
+        (E_scale,dx_scale,kT,x,V,K_onsite,sigma,mu_l,battery_weight) = physics
         self.E_scale = E_scale
         self.dx_scale = dx_scale
         
@@ -36,10 +37,12 @@ class Physics():
         self.K_onsite = K_onsite
         self.sigma = sigma
         self.calculate_K_matrix(self.x,self.K_onsite,self.sigma)
-        
-        if mu_l[0] != mu_l[1]:
-            raise ValueError("Finite bias calculation. Feature not yet available!") 
+       
+        # disabled for now. Otherwise battery nodes not identified. 
+        #if mu_l[0] != mu_l[1]:
+        #    raise ValueError("Finite bias calculation. Feature not yet available!") 
         self.mu_l = mu_l
+        self.battery_weight = battery_weight
 
     def calculate_K_matrix(self,x,K_onsite,sigma):
         '''

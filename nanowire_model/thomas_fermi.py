@@ -12,9 +12,9 @@ class ThomasFermi(Physics):
     def __init__(self,physics):
         Physics.__init__(self,physics)
     
-    # There are two broad TF solvers. One of them is a fixed mu solver, which given the dot potentials, finds the expected charge density.
-    # The other is a fixed N solver, which given number of electron on each dot, finds the expected charge density.
-    # Both solvers take in an initial mask and require the number of dots to be known in advance.
+        # There are two broad TF solvers. One of them is a fixed mu solver, which given the dot potentials, finds the expected charge density.
+        # The other is a fixed N solver, which given number of electron on each dot, finds the expected charge density.
+        # Both solvers take in an initial mask and require the number of dots to be known in advance.
     
     def find_n_dot_estimate(self):
         '''
@@ -264,21 +264,33 @@ class ThomasFermi(Physics):
 
         The iteration ends when the mask converges to a fixed value or N_lim iterations are reached.
         '''
-        old_mask = mask
+        old_mask = mask.mask
         i = 0
         while(i < N_lim):
             n,mu_d = self.tf_solver_fixed_N(mask,N_d) 
            
             V = self.V             
             mask.calculate_new_mask_turning_points(V,self.mu_l,mu_d)
+            #mask.calculate_mask_from_n(n)
             mask.calculate_mask_info_from_mask()
            
-            if(old_mask.mask == mask.mask):
+            if(old_mask == mask.mask):
                 break  
-            old_mask = mask
+            old_mask = mask.mask
             i += 1
 
         if(i == N_lim):
             raise Exception("Mask failed to converge in Thomas Fermi iterative fixed N solver.")  
-
         return n,mu_d
+
+    def calculate_thomas_fermi_energy(self,n):
+        '''
+        Input: 
+            n : electron density
+        Output:
+            E : Thomas-Fermi energy
+
+        E = V n + 1/2 n K n
+        '''
+        E = np.sum(self.V*n) + 0.5 * np.sum(n*np.dot(self.K,n.T))
+        return E
