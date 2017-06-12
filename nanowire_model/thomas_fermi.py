@@ -3,6 +3,7 @@
 import numpy as np
 import mask
 from physics import Physics
+import scipy.optimize
     
 class ThomasFermi(Physics):
     '''
@@ -228,6 +229,37 @@ class ThomasFermi(Physics):
         N_grid = len(mask.mask)
         return z[:N_grid],z[N_grid:N_grid + num_dot] 
 
+    def tf_solver_fixed_N_opt(self,mask,N_d):
+        '''
+        Takes in a mask object and number of electrons on each dot.
+        The lead potentials are taken from self.mu_l and are not explicitly given.
+
+        Optional Solver based on scipy.optimize.minimize. Has the added advantage that n >= 0 can be implemented as a constraint.
+        '''
+
+        def energy(n,V,mu_x,K):
+            return np.sum((V - mu_x)*n) + 0.5*np.sum(n*np.dot(K,n))
+       
+        # lead constraints
+        mu_x = self.calculate_mu_x_from_mask(mask,[0]*mask.mask_info['num_dot'])
+
+        # dot constraints
+        cons = []
+        for key,val in mask.mask_info.items():
+            if (key[0] == 'd'):
+                cons += [{'type':'eq','fun':lambda x : np.sum(x[val[0]:(val[1]+1)]) - N_d[int(key[1:])]}]
+            #elif(key[0] == 'b'):
+            #    cons += [{'type':'eq','fun':lambda x : x[val[0]:(val[1]+1)]}]
+            else:
+                pass
+
+        # initial guess for the solution
+        n_0 = np.zeros(len(self.V))
+        # bounds parameter defines that n >= 0
+        root = scipy.optimize.minimize(lambda x : energy(x,self.V,mu_x,self.K),n_0,bounds=[(0,None)]*len(n_0),constraints=cons)
+
+        return root.x
+
     def tf_iterative_solver_fixed_mu(self,mask,mu_d,N_lim = 10):
         '''
         Solve the TF problem iteratively until the mask converges.
@@ -267,11 +299,10 @@ class ThomasFermi(Physics):
         old_mask = mask.mask
         i = 0
         while(i < N_lim):
-            n,mu_d = self.tf_solver_fixed_N(mask,N_d) 
+            n = self.tf_solver_fixed_N_opt(mask,N_d) 
            
-            V = self.V             
-            mask.calculate_new_mask_turning_points(V,self.mu_l,mu_d)
-            #mask.calculate_mask_from_n(n)
+            #mask.calculate_new_mask_turning_points(V,self.mu_l,mu_d)
+            mask.calculate_mask_from_n(n)
             mask.calculate_mask_info_from_mask()
            
             if(old_mask == mask.mask):
@@ -281,7 +312,7 @@ class ThomasFermi(Physics):
 
         if(i == N_lim):
             raise Exception("Mask failed to converge in Thomas Fermi iterative fixed N solver.")  
-        return n,mu_d
+        return n
 
     def calculate_thomas_fermi_energy(self,n):
         '''

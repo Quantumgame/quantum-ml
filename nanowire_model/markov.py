@@ -116,11 +116,11 @@ class Markov():
         '''
        
         N_dot_1 = u[1:-1] 
-        n1,mu1 = self.tf.tf_iterative_solver_fixed_N(self.prelim_mask,N_dot_1)
+        n1 = self.tf.tf_iterative_solver_fixed_N(self.prelim_mask,N_dot_1)
         E_1 = self.tf.calculate_thomas_fermi_energy(n1)
 
         N_dot_2 = v[1:-1] 
-        n2,mu2 = self.tf.tf_iterative_solver_fixed_N(self.prelim_mask,N_dot_2)
+        n2 = self.tf.tf_iterative_solver_fixed_N(self.prelim_mask,N_dot_2)
         E_2 = self.tf.calculate_thomas_fermi_energy(n2)
 
         simple_prob = self.fermi(E_2 - E_1,self.tf.kT)
