@@ -1,6 +1,8 @@
 # Mask class to handle classfication of the potential landscape into leads, barriers and dots.
 # Physics is not done here! This is a just a higher level wrapper to work with masks.
 
+import exceptions
+
 class Mask:
     '''
     Mask class is used by ThomasFermi class for handling dot classfication. There are two attributes : mask  and mask_info.
@@ -54,6 +56,8 @@ class Mask:
         '''
         This function processes the information from mask into a dictionary for use by other modules.
         '''
+        # important to set this to empty, else values from the last mask_info will not be removed
+        self.mask_info = {}
         # Load the information about the leads. 
         # The strategy is similar as in calculate_mask_from_n.
         try: 
@@ -173,5 +177,4 @@ class Mask:
                     n_index_dot += 1
         
         except IndexError:
-            print("Mask creation failed from turning points.") 
-            
+           raise exceptions.InvalidChargeState 

@@ -1,3 +1,3 @@
 # quantum-ml
-Codes for modelling quantum dots and machine learning their parameters
+Codes for modeling quantum dots and machine learning voltage to charge relationships.
 (Under development.)

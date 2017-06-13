@@ -40,7 +40,18 @@ Network structure was [6,12,6]
 
 - Moved all old code to a junk folder. nanowire_model will be the development folder.
 - Created a machine_learning folder at root of repo, will be used for further machine learning code.
+- Added screening to the K matrix to prevent $n <= 0$
 
----
+### 13th June 2017
+- iterative fixed mu solver is not very useful. It is only used for obtaining an estimate on number of electrons in the dot.
+- added a new function to calculate N_d (number of electrons on each dot) from an input n and the mask stored in ThomasFermi object
+- implemented startegy argument in fixed N solver with 'simple','simple\_iter','opt' and 'opt\_iter' values.
+	- simple : one iteration of the fixed N solver using the linear system
+	- simple_iter : iterations of the fixed N solver using the linear system
+	- opt : solves the optimisation problem for energy with n >= 0 as a constraint
+	- opt_inter : iteratively solves the opt problem until the mask converges
+- fixed a bug in mask_info calculation from mask. The mask_info dictionary has to set to empty {} when calculating from a new mask, else the old values persist.
+- added mu_d calculation in the opt solver using V + K n = mu, the dot potential used is the value of mu at the center of the dot
+- In each iteration of fixed N solver, I have chosen to update the mask based on the turning points and not the n density. The n density is not reliable because: n <= 0 at some points and finding n ~ 0 points is numerically unstable. (needs a reliable eps such that n - eps ~ 0, such an eps is not available offhand)
 
 
