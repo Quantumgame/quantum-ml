@@ -36,4 +36,11 @@ First stage of dot classfier with n < 0 being classified as a barrier seems to b
 Wrote a DNN network, works with 99% accuracy with under a minute runtime.
 Network structure was [6,12,6]
 
+### 12th June 2017 
+
+- Moved all old code to a junk folder. nanowire_model will be the development folder.
+- Created a machine_learning folder at root of repo, will be used for further machine learning code.
+
+---
+
 
