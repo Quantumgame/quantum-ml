@@ -200,7 +200,7 @@ class ThomasFermi(Physics):
         num_dot = len(mu_d)
         N_grid = len(self.mask.mask)
         
-        return z[:N_grid],z[N_grid:N_grid + num_dot] 
+        return z[:N_grid],z[N_grid:(N_grid + num_dot)] 
 
     def tf_solver_fixed_N(self,N_d):
         '''
@@ -226,7 +226,7 @@ class ThomasFermi(Physics):
 
         num_dot = len(N_d)
         N_grid = len(self.mask.mask)
-        return z[:N_grid],z[N_grid:N_grid + num_dot] 
+        return z[:N_grid],z[N_grid:(N_grid + num_dot)] 
 
     def tf_solver_fixed_N_opt(self,N_d):
         '''
@@ -294,7 +294,7 @@ class ThomasFermi(Physics):
             raise Exception("Mask failed to converge in Thomas Fermi iterative fixed mu solver.")  
         return n,N_d
 
-    def tf_iterative_solver_fixed_N(self,N_d,N_lim = 10,strategy='simple'):
+    def tf_iterative_solver_fixed_N(self,N_d,N_lim = 10,strategy='opt_iter'):
         '''
         Solve the TF problem iteratively until the mask converges.
 
@@ -343,7 +343,7 @@ class ThomasFermi(Physics):
                
                 self.mask.calculate_new_mask_turning_points(self.V,self.mu_l,mu_d)
                 self.mask.calculate_mask_info_from_mask()
-               
+             
                 if(old_mask == self.mask.mask):
                     break  
                 old_mask = self.mask.mask
@@ -356,16 +356,21 @@ class ThomasFermi(Physics):
         else:
             raise Exception("Unknown strategy in iterative fixed N solver.")
 
-    def calculate_thomas_fermi_energy(self,n):
+    def calculate_thomas_fermi_energy(self,n,mu_d):
         '''
         Input: 
             n : electron density
+            mu_d : dot potentials
         Output:
             E : Thomas-Fermi energy
 
         E = V n + 1/2 n K n
         '''
-        E = np.sum(self.V*n) + 0.5 * np.sum(n*np.dot(self.K,n.T))
+        N_d = self.calculate_N_d_from_n(n)
+        # mu_x with only the leads
+        mu_d_tmp = [0.0]*len(mu_d)
+        mu_x = self.calculate_mu_x_from_mask(mu_d_tmp)
+        E = np.sum((self.V - 0.0*mu_x)*n) + 0.5 * np.sum(n*np.dot(self.K,n.T)) - 0.0*np.sum(mu_d*N_d)
         return E
 
     def calculate_N_d_from_n(self,n):

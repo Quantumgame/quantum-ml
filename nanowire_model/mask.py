@@ -49,8 +49,7 @@ class Mask:
             # + 1 has to be included since the end of the range is non-inclusive
             self.mask[l1_start:l1_end + 1] = 'l' * (l1_end + 1 - l1_start)
         except ValueError:
-           self.mask = []
-           print("Mask creation failed. The potential has no barriers and leads are shorted.") 
+           raise exceptions.InvalidChargeState
    
     def calculate_mask_info_from_mask(self):
         '''
@@ -78,8 +77,7 @@ class Mask:
             self.mask_info['l1'] = (l1_start,l1_end)
 
         except ValueError:
-           print("Mask info creation failed. The potential has no barriers and leads are shorted.") 
-           self.mask_info = {} 
+            raise InvalidChargeState
 
         # Now find the information about the dots and barriers.
         dot_index = 0
@@ -120,6 +118,9 @@ class Mask:
 
         # add the num_dot value
         self.mask_info['num_dot'] = dot_index
+
+        if(self.mask_info['num_dot'] == 0):
+            raise exceptions.InvalidChargeState
    
     def calculate_new_mask_turning_points(self,V,mu_l,mu_d):
         '''

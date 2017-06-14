@@ -6,16 +6,35 @@ import networkx as nx
 
 import thomas_fermi
 import rank_nullspace
+import tunneling
+import exceptions
 
 class Markov():
     '''
     Class Markov is used for graph creation and calculation of currents.
     '''
 
-    def __init__(self,graph_model,physics):
+    def __init__(self,graph_model,physics,tf_strategy='opt_iter'):
         self.graph_model = graph_model
+        # note that physics is a tuple of the physical arguments and is passed while creating
+        # ThomasFermi class
         self.physics = physics
         self.G = nx.DiGraph() 
+        self.tf = thomas_fermi.ThomasFermi(self.physics)
+        # this is necessary to init the prelim mask
+        num_dot = self.tf.find_n_dot_estimate()
+        
+        # get start_node and num_dot
+        # initially add dots are left to chemical potential of the left lead
+        mu_d = [self.tf.mu_l[0]]*num_dot
+        n,N_d = self.tf.tf_solver_fixed_mu(mu_d)
+        N_est = [int(np.floor(x)) for x in N_d]
+         
+        # dots + leads
+        # create the start node tuple
+        N_est = [0] + N_est + [0]
+        self.start_node = tuple(N_est)
+        self.tf_strategy = tf_strategy
     
     def check_validity(self, u):
         '''
@@ -25,6 +44,8 @@ class Markov():
         Output:
             True/False
 
+        0 : Whether the physics can support such a charge state
+        False if InvalidChargeException is raised.
         Constraints:
         1. 0 <= abs(N_D - start_node) <= p
         2. abs(N_L-N_R) <= q
@@ -32,7 +53,14 @@ class Markov():
         4. N_D >= 0
         '''
         (p,q) = self.graph_model
-        
+
+        cond0 = True
+        N_d = u[1:-1]
+        try:
+            self.tf.tf_iterative_solver_fixed_N(N_d,strategy=self.tf_strategy)
+        except exceptions.InvalidChargeState:
+            cond0 = False
+            
         cond1 = True
         cond4 = True 
         num_dots = len(u) - 2
@@ -44,7 +72,7 @@ class Markov():
 
         cond3 = (np.sum(u) == np.sum(np.array(self.start_node)))
 
-        return (cond1 and cond2 and cond3 and cond4)
+        return (cond0 and cond1 and cond2 and cond3 and cond4)
 
     def generate_neighbours(self,v):
         '''
@@ -116,21 +144,21 @@ class Markov():
         '''
        
         N_dot_1 = u[1:-1] 
-        n1 = self.tf.tf_iterative_solver_fixed_N(self.prelim_mask,N_dot_1)
-        E_1 = self.tf.calculate_thomas_fermi_energy(n1)
+        n1,mu_d_1 = self.tf.tf_iterative_solver_fixed_N(N_dot_1,strategy=self.tf_strategy)
+        E_1 = self.tf.calculate_thomas_fermi_energy(n1,mu_d_1)
 
         N_dot_2 = v[1:-1] 
-        n2 = self.tf.tf_iterative_solver_fixed_N(self.prelim_mask,N_dot_2)
-        E_2 = self.tf.calculate_thomas_fermi_energy(n2)
+        n2,mu_d_2 = self.tf.tf_iterative_solver_fixed_N(N_dot_2,strategy=self.tf_strategy)
+        E_2 = self.tf.calculate_thomas_fermi_energy(n2,mu_d_2)
 
         simple_prob = self.fermi(E_2 - E_1,self.tf.kT)
         
-        #tunnel_prob = tunneling.calculate_tunnel_prob(u,v,physics,n1,mu1)
+        tunnel_prob = tunneling.calculate_tunnel_prob(u,v,self.tf,self.tf_strategy)
         tunnel_prob = 1
 
-        #attempt_rate = tunneling.calculate_attempt_rate(u,v,physics,n1,mu1)
-        #attempt_rate *= 1000
-        attempt_rate = 1
+        attempt_rate = tunneling.calculate_attempt_rate(u,v,self.tf,self.tf_strategy)
+        attempt_rate *= 100
+        #attempt_rate = 1
         
         weight = attempt_rate*tunnel_prob*simple_prob
         return weight
@@ -163,23 +191,9 @@ class Markov():
             G : Markov graph of the charge states, weights assigned to edges using the energy method at zero bias, battery edges are added according to the battery weight paramter in physics input
 
         '''
-        self.G = nx.DiGraph() 
-        
         # queue used for BFS generation of the graph
         Q = queue.Queue()
 
-        # get start_node and num_dot
-        self.tf = thomas_fermi.ThomasFermi(self.physics)
-        self.num_dot,self.prelim_mask = self.tf.find_n_dot_estimate() 
-
-        mu_d = [self.tf.mu_l[0]]*self.num_dot
-        n,N_d = self.tf.tf_iterative_solver_fixed_mu(self.prelim_mask,mu_d)
-        N_est = [int(x) for x in N_d]
-         
-        # dots + leads
-        # create the start node tuple
-        N_est = [0] + N_est + [0]
-        self.start_node = tuple(N_est)
 
         Q.put(self.start_node)
         while not Q.empty():
@@ -263,7 +277,7 @@ class Markov():
 
         return current
 
-    def get_max_prob_node(self):
+    def get_charge_state(self):
         '''
         Output:
             Node with highest occupation probability
@@ -277,4 +291,5 @@ class Markov():
        
         max_prob_index = np.argmax(dist)
         nodes = list(self.G.nodes())
-        return nodes[max_prob_index]
+        # remove the leads
+        return nodes[max_prob_index][1:-1]

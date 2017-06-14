@@ -53,5 +53,6 @@ Network structure was [6,12,6]
 - fixed a bug in mask_info calculation from mask. The mask_info dictionary has to set to empty {} when calculating from a new mask, else the old values persist.
 - added mu_d calculation in the opt solver using V + K n = mu, the dot potential used is the value of mu at the center of the dot
 - In each iteration of fixed N solver, I have chosen to update the mask based on the turning points and not the n density. The n density is not reliable because: n <= 0 at some points and finding n ~ 0 points is numerically unstable. (needs a reliable eps such that n - eps ~ 0, such an eps is not available offhand)
+- I am deciding that there is no such thing as a dot with 0 e-. It is simply a no dot state.
 
 

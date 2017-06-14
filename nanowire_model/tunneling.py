@@ -6,17 +6,13 @@ import scipy.integrate
 
 import numpy as np
 import thomas_fermi
-import dot_classifier
 
-def calculate_tunnel_prob(v,u,physics,n,mu,mask):
+def calculate_tunnel_prob(v,u,tf,tf_strategy):
     '''
     Input:
         v : start node
         u : end node
-        physics : (x,V,K,mu_l,battery_weight,kT)
-        n : electron density as a function of x
-        mu : chemical potential as a function of x
-        (n,mu) are from the starting node
+        tf : ThomasFermi object (n,mu) are calculated again
 
     Output:
         tunnel_prob : (under WKB approximation)
@@ -29,35 +25,39 @@ def calculate_tunnel_prob(v,u,physics,n,mu,mask):
     index_electron_to = np.argwhere(diff == 1.0)[0,0]
     index_electron_from = np.argwhere(diff == -1.0)[0,0]
 
-    (x,V,K,mu_l,battery_weight,kT) = physics
-
     # clever way to find the barrier index
     bar_index = np.floor(0.5*(index_electron_to + index_electron_from))
-    bar_key = 'b' + str(bar_index)
-   
+    bar_key = 'b' + str(int(bar_index))
+  
+    # solve tf for start node 
+    n,mu = tf.tf_iterative_solver_fixed_N(v[1:-1],strategy=tf_strategy)
+  
     # chemical_potential = energy of the electron 
+    # add in the lead potentials to mu to simplify notation
+    mu = np.concatenate((np.array([tf.mu_l[0]]),mu,np.array([tf.mu_l[1]]))) 
     mu_e = mu[index_electron_from]
 
     # integral
-    bar_begin = mask.mask_info[bar_key][0]
-    bar_end = mask.mask_info[bar_key][1]
+    bar_begin = tf.mask.mask_info[bar_key][0]
+    bar_end = tf.mask.mask_info[bar_key][1]
 
-    V_eff = V + np.dot(K,n)
-    factor = scipy.integrate.simps(np.sqrt(np.abs(V_eff[bar_begin:bar_end+1] - mu_e)),x[bar_begin:bar_end+1])
-    # check this, units of E(eV) and dx(nm)
-    scale = 10
+    # in the barrier region, since n = 0, the effective potential is almost just V
+    V_eff = tf.V + np.dot(tf.K,n)
+    
+    factor = scipy.integrate.simps(np.sqrt(np.abs(V_eff[bar_begin:bar_end+1] - mu_e)),tf.x[bar_begin:bar_end+1])
+
+    # calcualte the scale based on physics in tf
+    scale = 10 
+    
     tunnel_prob = np.exp(-scale*factor)
     return tunnel_prob
 
-def calculate_attempt_rate(v,u,physics,n,mu,mask):
+def calculate_attempt_rate(v,u,tf,tf_strategy):
     '''
     Input:
         v : start node
         u : end node
-        physics : (x,V,K,mu_l,battery_weight,kT)
-        n : electron density as a function of x
-        mu : chemical potential as a function of x
-        (n,mu) are from the starting node
+        tf : Thomas Fermi object
 
     Output:
         attempt_rate : calculate simply as the semi-classical travel time
@@ -65,25 +65,34 @@ def calculate_attempt_rate(v,u,physics,n,mu,mask):
     u = np.array(u)
     v = np.array(v)
     diff = u - v
+    
+    # solve for start node state
+    n,mu = tf.tf_iterative_solver_fixed_N(v[1:-1],strategy=tf_strategy)
 
     index_electron_to = np.argwhere(diff == 1.0)[0,0]
     index_electron_from = np.argwhere(diff == -1.0)[0,0]
 
-    (x,V,K,mu_l,battery_weight,kT) = physics
-
-    if index_electron_from == 0 or index_electron_from == (len(u) - 1): 
+    if index_electron_from == 0:  
         #transport from leads
-        attempt_rate = 1e-2
-    else:
-        u[index_electron_from] -= 1
-        N_dot_1 = u[1:-1] 
-        n1,mu1 = thomas_fermi.solve_thomas_fermi(x,V,K,mu_l,N_dot_1)
+        # calculate the attempt rate from the dot
+        index_electron_from = 1
+    if index_electron_from == len(v) - 1:  
+        #transport from leads
+        # calculate the attempt rate from the dot
+        index_electron_from = len(v) - 2
+    
+    v[index_electron_from] -= 1
+    N_dot_1 = u[1:-1] 
+    n1,mu1 = tf.tf_iterative_solver_fixed_N(N_dot_1,strategy=tf_strategy)
 
-        dot_index = index_electron_from
-        dot_key = 'd' + str(dot_index)
-        dot_begin = mask.mask_info[dot_key][0]
-        dot_end = mask.mask_info[dot_key][1]
-        attempt_rate = np.sqrt(mu[dot_index] - mu1[dot_index])/(dot_end - dot_begin + 1) 
+    # correct for the fact that leads are included in v
+    # so 1 = index_electron_from corresponds to 'd0'
+    dot_index = index_electron_from - 1
+    dot_key = 'd' + str(int(dot_index))
+    dot_begin = tf.mask.mask_info[dot_key][0]
+    dot_end = tf.mask.mask_info[dot_key][1]
+    attempt_rate = np.sqrt(np.abs(mu[dot_index] - mu1[dot_index]))/(dot_end - dot_begin + 1) 
+
     return attempt_rate
     
      
