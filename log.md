@@ -67,3 +67,8 @@ Here is my idea,
 > accur = avg over test samples [(count\_CS == predicted\_CS)/n_out ]
 
 
+### 15th June 2017
+- tf.matmul requires tensors of same rank. So if the rank does not match, use tf.reshape.
+- Lesson learned: single layer classifier is not going to learn, the training time would be too much, I am not thinking of building a DNN
+- Moving to pooling for reduing dimensionality, does pooling really reduce dimensionality??
+- I am thinking of a hybrid arch, where a NN is used to learn E_C,V_b and so on.
