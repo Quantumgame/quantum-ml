@@ -54,5 +54,16 @@ Network structure was [6,12,6]
 - added mu_d calculation in the opt solver using V + K n = mu, the dot potential used is the value of mu at the center of the dot
 - In each iteration of fixed N solver, I have chosen to update the mask based on the turning points and not the n density. The n density is not reliable because: n <= 0 at some points and finding n ~ 0 points is numerically unstable. (needs a reliable eps such that n - eps ~ 0, such an eps is not available offhand)
 - I am deciding that there is no such thing as a dot with 0 e-. It is simply a no dot state.
+- changed the default strategy in fixed N solver to opt_iter
+- tunneling included, it is making the low N peaks smaller than the larger N peaks
+- trying to see if machine can learn the full (V,I) -> C map.
+
+### 14th June 2017
+- Can single layer NN learn scale invariance?
+- I think the problem with single layer not learning is lack of data
+- DNN seems to be working, though I don't know how to quantify the accuracy.
+Here is my idea, 
+
+> accur = avg over test samples [(count\_CS == predicted\_CS)/n_out ]
 
 
