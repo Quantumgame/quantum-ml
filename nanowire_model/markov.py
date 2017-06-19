@@ -251,7 +251,7 @@ class Markov():
                 #nullspace is trivial, in this case there is no stable prob. distribution,
                 #In case raised, try changing the rtol parameter
                 raise ValueError('Nullspace of Markov matrix is trivial. No probability distribution exists')
-        except ValueError,LinAlgError:
+        except (ValueError,np.linalg.LinAlgError) as e:
             raise exceptions.InvalidChargeState
         return dist
             
