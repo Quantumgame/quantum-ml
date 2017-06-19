@@ -241,15 +241,18 @@ class Markov():
         Output:
             dist : prob normalised nullspace vector of M
         '''
-        nullspace = rank_nullspace.nullspace(M,rtol=1e-9)  
-        if (nullspace.shape[1] > 0):
-            #non-trivial nullspace exists for M
-            # dist is prob distribution
-            dist = nullspace[:,0]/nullspace[:,0].sum(axis=0)
-        else:
-            #nullspace is trivial, in this case there is no stable prob. distribution,
-            #In case raised, try changing the rtol parameter
-            raise ValueError('Nullspace of Markov matrix is trivial. No probability distribution exists')
+        try:
+            nullspace = rank_nullspace.nullspace(M,rtol=1e-9)  
+            if (nullspace.shape[1] > 0):
+                #non-trivial nullspace exists for M
+                # dist is prob distribution
+                dist = nullspace[:,0]/nullspace[:,0].sum(axis=0)
+            else:
+                #nullspace is trivial, in this case there is no stable prob. distribution,
+                #In case raised, try changing the rtol parameter
+                raise ValueError('Nullspace of Markov matrix is trivial. No probability distribution exists')
+        except ValueError,LinAlgError:
+            raise exceptions.InvalidChargeState
         return dist
             
     def get_current(self):
