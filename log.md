@@ -72,3 +72,9 @@ Here is my idea,
 - Lesson learned: single layer classifier is not going to learn, the training time would be too much, I am not thinking of building a DNN
 - Moving to pooling for reduing dimensionality, does pooling really reduce dimensionality??
 - I am thinking of a hybrid arch, where a NN is used to learn E_C,V_b and so on.
+
+### 16th June 2017
+- Trying just white noise, this seems to be related to the Anderson model
+
+### 19th June 2017
+- It is a good idea to store data in the form of dictionaries in npy format.
