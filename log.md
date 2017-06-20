@@ -78,3 +78,6 @@ Here is my idea,
 
 ### 19th June 2017
 - It is a good idea to store data in the form of dictionaries in npy format.
+
+### 20th June 2017
+- Deep networks, random permutation of data and rint were crucial in learning scale invariance.

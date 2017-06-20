@@ -153,12 +153,12 @@ class Markov():
 
         simple_prob = self.fermi(E_2 - E_1,self.tf.kT)
         
-        tunnel_prob = tunneling.calculate_tunnel_prob(u,v,self.tf,self.tf_strategy)
+        #tunnel_prob = tunneling.calculate_tunnel_prob(u,v,self.tf,self.tf_strategy)
         tunnel_prob = 1
 
         attempt_rate = tunneling.calculate_attempt_rate(u,v,self.tf,self.tf_strategy)
         attempt_rate *= 100
-        #attempt_rate = 1
+        attempt_rate = 1
         
         weight = attempt_rate*tunnel_prob*simple_prob
         return weight
