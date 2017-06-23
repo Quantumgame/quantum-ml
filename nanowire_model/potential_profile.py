@@ -18,8 +18,7 @@ def V_x_wire(x,list_b):
     V(x) : potential profile
     '''
     
-    V = np.zeros(len(x))
-    for i in range(len(list_b)): 
-        V += wire_profile(x,list_b[i])
+    wire_profiles = [wire_profile(x,p) for p in list_b]
+    V = np.sum(wire_profiles,axis=0)
         
     return V

@@ -28,35 +28,37 @@ class Mask:
         '''
         n = list(n) 
         # All regions are classified as a dot or a barrier. 
-        self.mask = ['d' if x > eps else 'b' for x in n ]
+        tmp_mask = ['d' if x > eps else 'b' for x in n ]
         # Then the first and the last regions are labelled as leads.
         try:
             # Lead 0
             l0_start = 0
             # The end of the lead 0 is found by finding the beginning of the first barrier.
-            l0_end = self.mask.index('b') - 1
+            l0_end = tmp_mask.index('b') - 1
            
              # + 1 has to be included since the end of the range is non-inclusive
-            self.mask[l0_start:l0_end + 1] = 'l' * (l0_end + 1 - l0_start)
+            tmp_mask[l0_start:l0_end + 1] = 'l' * (l0_end + 1 - l0_start)
 
             # Lead 1
-            l1_end = len(self.mask) - 1
+            l1_end = len(tmp_mask) - 1
             # The starting of the lead 1 is found by finding the end of the last barrier. 
-            # This is done by looking for the first 'b' while trasnversing from the end of the self.mask
+            # This is done by looking for the first 'b' while trasnversing from the end of the tmp_mask
             # Note that when searching in the reversed list, the index returned is counted from the end of the list. It has to be converted to be an index from the start of the list.
-            l1_start = len(self.mask) - self.mask[::-1].index('b')  
+            l1_start = len(tmp_mask) - tmp_mask[::-1].index('b')  
             
             # + 1 has to be included since the end of the range is non-inclusive
-            self.mask[l1_start:l1_end + 1] = 'l' * (l1_end + 1 - l1_start)
+            tmp_mask[l1_start:l1_end + 1] = 'l' * (l1_end + 1 - l1_start)
         except ValueError:
-           raise exceptions.InvalidChargeState
+           raise exceptions.NoBarrierState
+
+        self.mask = tmp_mask 
    
     def calculate_mask_info_from_mask(self):
         '''
         This function processes the information from mask into a dictionary for use by other modules.
         '''
         # important to set this to empty, else values from the last mask_info will not be removed
-        self.mask_info = {}
+        tmp_mask_info = {}
         # Load the information about the leads. 
         # The strategy is similar as in calculate_mask_from_n.
         try: 
@@ -65,7 +67,7 @@ class Mask:
             # The end of the lead 0 is found by finding the beginning of the first barrier.
             l0_end = self.mask.index('b') - 1
          
-            self.mask_info['l0'] = (l0_start,l0_end)
+            tmp_mask_info['l0'] = (l0_start,l0_end)
             
             # Lead 1
             l1_end = len(self.mask) - 1
@@ -74,10 +76,10 @@ class Mask:
             # Note that when searching in the reversed list, the index returned is counted from the end of the list. It has to be converted to be an index from the start of the list.
             l1_start = len(self.mask) - self.mask[::-1].index('b')  
             
-            self.mask_info['l1'] = (l1_start,l1_end)
+            tmp_mask_info['l1'] = (l1_start,l1_end)
 
         except ValueError:
-            raise InvalidChargeState
+            raise NoBarrierState
 
         # Now find the information about the dots and barriers.
         dot_index = 0
@@ -95,7 +97,7 @@ class Mask:
                 new_index = index + self.mask[index:].index('d')
                 barrier_key = 'b' + str(barrier_index)
                 # -1 because new_index points to the beginnig of the dot
-                self.mask_info[barrier_key] = (index,new_index - 1)
+                tmp_mask_info[barrier_key] = (index,new_index - 1)
                 barrier_index += 1
                 index = new_index
                 
@@ -103,7 +105,7 @@ class Mask:
                 new_index = index + self.mask[index:].index('b')
                 # index has to be added since the find function return index relative to the sliced array and not the original array
                 dot_key = 'd' + str(dot_index)
-                self.mask_info[dot_key] = (index,new_index - 1)
+                tmp_mask_info[dot_key] = (index,new_index - 1)
                 dot_index += 1
                 index = new_index
 
@@ -114,13 +116,15 @@ class Mask:
             new_index = index + self.mask[index:].index('l')
             barrier_key = 'b' + str(barrier_index)
             # -1 because new_index points to the beginnig of the dot
-            self.mask_info[barrier_key] = (index,new_index - 1)
+            tmp_mask_info[barrier_key] = (index,new_index - 1)
 
         # add the num_dot value
-        self.mask_info['num_dot'] = dot_index
+        tmp_mask_info['num_dot'] = dot_index
 
-        if(self.mask_info['num_dot'] == 0):
-            raise exceptions.InvalidChargeState
+        #if(tmp_mask_info['num_dot'] == 0):
+        #    raise exceptions.InvalidChargeState
+
+        self.mask_info = tmp_mask_info
    
     def calculate_new_mask_turning_points(self,V,mu_l,mu_d):
         '''
@@ -131,7 +135,7 @@ class Mask:
         It is not necessary to have run the calculate_mask_from_n, since the mask size is determined from len(V).
         '''
         # treat all points as barriers, then selectively we change the ones which are leads and which are dots
-        self.mask = ['b'] * len(V)
+        tmp_mask = ['b'] * len(V)
       
         try:   
             # find the turning point for the left lead
@@ -142,7 +146,7 @@ class Mask:
             # this loop will exit for the first i such that V[i] > mu_l[0]
             # lead1 will end at i-1
              
-            self.mask[:i_left] = 'l' * (i_left)
+            tmp_mask[:i_left] = 'l' * (i_left)
             
             # find the turning point for the right lead
             i_right = len(V)-1
@@ -150,7 +154,7 @@ class Mask:
                 i_right -= 1
             # this loop exits for the first i from the right such that V[i] > mu_l[1]
             # lead2 starts at i + 1
-            self.mask[i_right + 1:] = 'l' * (len(self.mask) - i_right - 1) 
+            tmp_mask[i_right + 1:] = 'l' * (len(tmp_mask) - i_right - 1) 
             
             n_index_dot = 0
             i_dot = i_left
@@ -163,7 +167,7 @@ class Mask:
                     while(V[i_dot] <= mu_d[n_index_dot]):
                         i_dot += 1
                     i_dot_end = i_dot - 1
-                    self.mask[i_dot_start:i_dot_end + 1] = 'd' * (i_dot_end - i_dot_start + 1)
+                    tmp_mask[i_dot_start:i_dot_end + 1] = 'd' * (i_dot_end - i_dot_start + 1)
                     n_index_dot += 1
                 else:
                     while(V[i_dot] < mu_d[n_index_dot]):
@@ -174,8 +178,10 @@ class Mask:
                     while(V[i_dot] <= mu_d[n_index_dot]):
                         i_dot += 1
                     i_dot_end = i_dot - 1
-                    self.mask[i_dot_start:i_dot_end + 1] = 'd' * (i_dot_end - i_dot_start + 1)
+                    tmp_mask[i_dot_start:i_dot_end + 1] = 'd' * (i_dot_end - i_dot_start + 1)
                     n_index_dot += 1
         
         except IndexError:
            raise exceptions.InvalidChargeState 
+
+        self.mask = tmp_mask

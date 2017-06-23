@@ -17,7 +17,7 @@ class ThomasFermi(Physics):
         # The other is a fixed N solver, which given number of electron on each dot, finds the expected charge density.
         # Both solvers take in an initial mask and require the number of dots to be known in advance.
     
-    def find_n_dot_estimate(self):
+    def find_n_dot_estimate(self,fix_mask):
         '''
         Estimate the number of dots and a mask assuming the chemical potential is mu_l everywhere
 
@@ -31,10 +31,13 @@ class ThomasFermi(Physics):
         mu_x = np.repeat(mu,len(self.V))
        
         # Use mu - V ~ n to make a preliminary classfication 
-        prelim_mask = mask.Mask(mu_x - self.V) 
-        self.mask = prelim_mask
-       
-        return prelim_mask.mask_info['num_dot'] 
+        if(not fix_mask):
+            prelim_mask = mask.Mask(mu_x - self.V) 
+            self.mask = prelim_mask
+            return prelim_mask.mask_info['num_dot'] 
+        else:
+            # return value from the old calculation
+            return self.mask.mask_info['num_dot']  
     
     def calculate_mu_x_from_mask(self,mu_d):
         '''
@@ -80,15 +83,15 @@ class ThomasFermi(Physics):
             # implement the n = 0 barrier constraint thorugh the Lagrange multipliers mu_bar
             if key[0] == 'b':
                 barrier_size = val[1] - val[0] + 1 
-                A[val[0]:val[0] + barrier_size,barrier_col_index:barrier_col_index + barrier_size ] = -1.0*np.identity(barrier_size)
-                A[barrier_col_index:barrier_col_index + barrier_size,val[0]:val[0] + barrier_size ] = np.identity(barrier_size)
+                A[val[0]:(val[0] + barrier_size),barrier_col_index:(barrier_col_index + barrier_size) ] = -1.0*np.identity(barrier_size)
+                A[barrier_col_index:(barrier_col_index + barrier_size),val[0]:(val[0] + barrier_size) ] = np.identity(barrier_size)
                 barrier_col_index += barrier_size
             
             # implement the sum_n over dot - N_d constraint
             elif key[0] == 'd':
                 dot_col_index = N_grid + int(key[1:])
                 dot_size = val[1] - val[0] + 1
-                A[dot_col_index,val[0]:val[0] + dot_size] = 1        
+                A[dot_col_index,val[0]:(val[0] + dot_size)] = 1        
                 A[dot_col_index,dot_col_index] = -1
         return A
 
@@ -370,7 +373,7 @@ class ThomasFermi(Physics):
         # mu_x with only the leads
         mu_d_tmp = [0.0]*len(mu_d)
         mu_x = self.calculate_mu_x_from_mask(mu_d_tmp)
-        E = np.sum((self.V - 0.0*mu_x)*n) + 0.5 * np.sum(n*np.dot(self.K,n.T)) - 0.0*np.sum(mu_d*N_d)
+        E = np.sum((self.V - mu_x)*n) + 0.5 * np.sum(n*np.dot(self.K,n.T)) -0.0* np.sum(mu_d*N_d)
         return E
 
     def calculate_N_d_from_n(self,n):

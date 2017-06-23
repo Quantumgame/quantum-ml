@@ -7,6 +7,12 @@ class InvalidChargeState(Exception):
     '''
     pass
 
+class NoBarrierState(Exception):
+    '''
+    This exception is raised when no barriers are found.
+    '''
+    pass
+
 
 
 

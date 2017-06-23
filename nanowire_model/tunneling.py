@@ -7,7 +7,7 @@ import scipy.integrate
 import numpy as np
 import thomas_fermi
 
-def calculate_tunnel_prob(v,u,tf,tf_strategy):
+def calculate_tunnel_prob(v,u,tf,tf_strategy,tf_solutions):
     '''
     Input:
         v : start node
@@ -29,9 +29,16 @@ def calculate_tunnel_prob(v,u,tf,tf_strategy):
     bar_index = np.floor(0.5*(index_electron_to + index_electron_from))
     bar_key = 'b' + str(int(bar_index))
   
-    # solve tf for start node 
-    n,mu = tf.tf_iterative_solver_fixed_N(v[1:-1],strategy=tf_strategy)
-  
+    if (v[1:-1] not in tf_solutions):
+        # solve tf for start node 
+        n,mu = tf.tf_iterative_solver_fixed_N(v[1:-1],strategy=tf_strategy)
+        E = self.tf.calculate_thomas_fermi_energy(n,mu)
+        tf_solutions[v[1:-1]] = {'n':n,'mu':mu,'E':E}
+    else:
+        n = self.tf_solutions[v[1:-1]]['n']
+        mu = self.tf_solutions[v[1:-1]]['mu']
+        E = self.tf_solutions[v[1:-1]]['E']
+        
     # chemical_potential = energy of the electron 
     # add in the lead potentials to mu to simplify notation
     mu = np.concatenate((np.array([tf.mu_l[0]]),mu,np.array([tf.mu_l[1]]))) 
@@ -47,7 +54,7 @@ def calculate_tunnel_prob(v,u,tf,tf_strategy):
     factor = scipy.integrate.simps(np.sqrt(np.abs(V_eff[bar_begin:bar_end+1] - mu_e)),tf.x[bar_begin:bar_end+1])
 
     # calcualte the scale based on physics in tf
-    scale = 10 
+    scale = tf.WKB_scale   
     
     tunnel_prob = np.exp(-scale*factor)
     return tunnel_prob

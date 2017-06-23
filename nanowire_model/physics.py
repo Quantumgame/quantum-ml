@@ -1,14 +1,14 @@
 # Module for storing the basic physics parameters. Physics class is defined here.
 
 import numpy as np
+import scipy.constants
 
 class Physics():
     '''
     Physics class is the base class for Thomas-Fermi calculations. Physical quantities stored here are:
     Scales:
-    E_scale  : energy scale of the problem, all energies are measured in this scale
-               default (eV)
-    dx_scale : scale for nearest neighbour distance in x-gird (m)
+    E_scale  : energy scale of the problem, all energies are measured in this scale (eV)
+    dx_scale : scale for nearest neighbour distance in x-gird (nm)
 
     Physical Parameters:
     kT       : temperature in eV
@@ -20,33 +20,41 @@ class Physics():
     K(x,x')  : 2D matrix for storing the interaction energy between points x and x',
     mu_l     : (mu_left,mu_right) 2-tuple for storing the lead potentials
     battery_weight : rate for transport throught a battery, set to a high number > 1000
+    short_circuit_current : The current to be returned when there is no barrier in the device
     '''
 
     def __init__(self,physics):
         '''
         Input:
-            physics = (E_scale,dx_scale,kT,x,V,K_onsite,sigma,x_0,mu_l,battery_weight)
+            physics is a dict with the keys
+            (E_scale,dx_scale,kT,x,V,K_onsite,sigma,x_0,mu_l,battery_weight,short_circuit_current)
         Output
             None
         '''
-        (E_scale,dx_scale,kT,x,V,K_onsite,sigma,x_0,mu_l,battery_weight) = physics
-        self.E_scale = E_scale
-        self.dx_scale = dx_scale
+        self.E_scale = physics['E_scale']
+        self.dx_scale = physics['dx_scale']
+        # set the WKB scale
+        # \sqrt(2 m_e)/h_bar * sqrt(E_scale) * dx_scale
         
-        self.kT = kT
-        self.x = x
-        self.V = V
-        self.K_onsite = K_onsite
-        self.sigma = sigma
-        self.x_0 = x_0
-        self.calculate_K_matrix(self.x,self.K_onsite,self.sigma,self.x_0)
+        self.WKB_scale = np.sqrt(2*scipy.constants.m_e*scipy.constants.e) * (1.0e-9) / scipy.constants.hbar
+        
+        self.kT = physics['kT']
+        self.x = physics['x']
+        self.V = physics['V']
+        self.K_onsite = physics['K_onsite']
+        self.sigma = physics['sigma']
+        self.x_0 = physics['x_0']
        
         # disabled for now. Otherwise battery nodes not identified. 
         #if mu_l[0] != mu_l[1]:
         #    raise ValueError("Finite bias calculation. Feature not yet available!") 
         
-        self.mu_l = mu_l
-        self.battery_weight = battery_weight
+        self.mu_l = physics['mu_l']
+        self.battery_weight = physics['battery_weight']
+        self.short_circuit_current = physics['short_circuit_current']
+        
+        # The K-matrix is calculated only once. 
+        self.calculate_K_matrix(self.x,self.K_onsite,self.sigma,self.x_0)
 
     def calculate_K_matrix(self,x,K_onsite,sigma,x_0):
         '''
