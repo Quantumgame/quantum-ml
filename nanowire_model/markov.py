@@ -162,8 +162,7 @@ class Markov():
             r[i] += 1 
             neigh.append(tuple(r))
 
-        # note the python3 syntax
-        valid = [*filter(self.check_validity,neigh)]    
+        valid = [x for x in neigh if self.check_validity(x)]    
         return valid
 
     def fermi(self,E,kT):
@@ -270,16 +269,16 @@ class Markov():
             G : Markov graph of the charge states, weights assigned to edges using the energy method at zero bias, battery edges are added according to the battery weight paramter in physics input
 
         '''
-        if (not self.recalculate_graph):
-            try:
-                self.recalculate_weights()
-                # get the stable prob distribution
-                self.get_prob_dist()
-                return
-            except exceptions.InvalidChargeState:
-                # this is necesary to init the prelim_mask
-                self.num_dot = self.tf.find_n_dot_estimate(False)
-                self.recalculate_graph = True 
+        #if (not self.recalculate_graph):
+        #    try:
+        #        self.recalculate_weights()
+        #        # get the stable prob distribution
+        #        self.get_prob_dist()
+        #        return
+        #    except exceptions.InvalidChargeState:
+        #        # this is necesary to init the prelim_mask
+        #        self.num_dot = self.tf.find_n_dot_estimate(False)
+        #        self.recalculate_graph = True 
 
         # queue used for BFS generation of the graph
         Q = queue.Queue()
@@ -304,11 +303,11 @@ class Markov():
                 nx.set_edge_attributes(self.G,'battery_edge',{(v,n) : False})
                 self.G.add_edge(n,v,weight=self.find_weight(n,v))
                 nx.set_edge_attributes(self.G,'battery_edge',{(n,v) : False})
-       
+      
         self.add_battery_edges()
         self.get_battery_nodes()
 
-        # get the stable prob distribution
+        ## get the stable prob distribution
         self.get_prob_dist()
 
     def get_battery_nodes(self):

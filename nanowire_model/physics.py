@@ -13,6 +13,7 @@ class Physics():
     Physical Parameters:
     kT       : temperature in eV
     x        : x-grid
+    list_b   : list of the gate params used to generate the potential profile
     V(x)     : array same size as len(x), storing the potential V(x), the nearest neighbour separation is given by dx_scale
     K_onsite : onsite interaction strength, used in calculating the K matrix
     sigma    : softening paramter of the matrix, used in calculating the K matrix
@@ -40,6 +41,7 @@ class Physics():
         
         self.kT = physics['kT']
         self.x = physics['x']
+        self.list_b = physics['list_b']
         self.V = physics['V']
         self.K_onsite = physics['K_onsite']
         self.sigma = physics['sigma']
