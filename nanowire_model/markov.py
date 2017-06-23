@@ -390,6 +390,10 @@ class Markov():
         output['charge_state'] = self.get_charge_state()
         output['prob_dist'] = self.dist
         output['num_dot'] = self.num_dot
+        if(self.num_dot == 0):
+            output['state'] = "QPC"
+        else:
+            output['state'] = "Dot"
 
         return output
 
