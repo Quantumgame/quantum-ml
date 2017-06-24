@@ -269,16 +269,16 @@ class Markov():
             G : Markov graph of the charge states, weights assigned to edges using the energy method at zero bias, battery edges are added according to the battery weight paramter in physics input
 
         '''
-        #if (not self.recalculate_graph):
-        #    try:
-        #        self.recalculate_weights()
-        #        # get the stable prob distribution
-        #        self.get_prob_dist()
-        #        return
-        #    except exceptions.InvalidChargeState:
-        #        # this is necesary to init the prelim_mask
-        #        self.num_dot = self.tf.find_n_dot_estimate(False)
-        #        self.recalculate_graph = True 
+        if (not self.recalculate_graph):
+            try:
+                self.recalculate_weights()
+                # get the stable prob distribution
+                self.get_prob_dist()
+                return
+            except exceptions.InvalidChargeState:
+                # this is necesary to init the prelim_mask
+                self.num_dot = self.tf.find_n_dot_estimate(False)
+                self.recalculate_graph = True 
 
         # queue used for BFS generation of the graph
         Q = queue.Queue()
