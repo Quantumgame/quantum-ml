@@ -46,18 +46,19 @@ def get_random(mean,sigma_mean = 0.05):
         return np.random.normal(mean,sigma_mean*np.abs(mean))
     
 def calculate_2d_map(ind):
+    st = time.time()
     physics_model = {}
     # multiple of eV
     physics_model['E_scale'] = 1
     # multiple of nm
     physics_model['dx_scale'] = 1
-    physics_model['kT'] = 1000e-6
+    physics_model['kT'] = 2000e-6
 
     # just initial param to generate the graph object
     b1 = [get_random(-200e-3,sigma_mean=0.02),get_random(-0.6),get_random(0.05),1]
-    d1 = [200e-3,get_random(-0.4),get_random(0.05),1]
+    d1 = [200e-3,get_random(-0.3),get_random(0.05),1]
     b2 = [get_random(-250e-3,sigma_mean=0.02),get_random(0.0),get_random(0.05),1]
-    d2 = [200e-3,get_random(0.4),get_random(0.05),1]
+    d2 = [200e-3,get_random(0.3),get_random(0.05),1]
     b3 = [get_random(-200e-3,sigma_mean=0.02),get_random(0.6),get_random(0.05),1]
 
     x = np.linspace(-1,1,100)
@@ -66,7 +67,7 @@ def calculate_2d_map(ind):
     physics_model['V'] = potential_profile.V_x_wire(x,physics_model['list_b'])
 
 
-    physics_model['K_onsite'] = get_random(45e-3)
+    physics_model['K_onsite'] = get_random(25e-3)
     physics_model['sigma'] = x[1] - x[0]
     physics_model['x_0'] = 0.1*(x[1] - x[0])
     physics_model['mu_l'] = (300.0e-3,300.1e-3)
@@ -84,7 +85,7 @@ def calculate_2d_map(ind):
     V_d_vec = np.linspace(50e-3,400e-3,N_v)
     output_vec = []
     input_vec = []
-    st = time.time()
+    
     for i in range(N_v):
         for j in range(N_v):
             d1[0] = V_d_vec[i]
@@ -94,7 +95,7 @@ def calculate_2d_map(ind):
             physics_model['V'] = potential_profile.V_x_wire(x,[b1,b2,b3,d1,d2])
             input_vec += [physics_model.copy()]
             output_vec += [calculate_current((graph,physics_model))]
-    print("time",time.time() - st)
+    #print("time",time.time() - st)
 
     # store the data
     # data is a list of dictonaries, with two keys : 'input' , 'output'
@@ -110,3 +111,5 @@ def calculate_2d_map(ind):
     import datetime
     dt = str(datetime.datetime.now()) 
     np.save(os.path.expanduser('~/datadump/double_dot_' + str(N_v) + '_grid_' + dt + '.npy'),data)
+    
+    return (time.time()-st)
