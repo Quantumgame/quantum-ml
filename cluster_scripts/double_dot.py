@@ -51,14 +51,14 @@ def calculate_2d_map(ind):
     physics_model['E_scale'] = 1
     # multiple of nm
     physics_model['dx_scale'] = 1
-    physics_model['kT'] = 1500e-6
+    physics_model['kT'] = 1000e-6
 
     # just initial param to generate the graph object
-    b1 = [get_random(-200e-3),get_random(-0.6),get_random(0.05),1]
-    d1 = [200e-3,get_random(-0.2),get_random(0.05),1]
-    b2 = [get_random(-250e-3),get_random(0.0),get_random(0.05),1]
-    d2 = [200e-3,get_random(0.2),get_random(0.05),1]
-    b3 = [get_random(-200e-3),get_random(0.6),get_random(0.05),1]
+    b1 = [get_random(-200e-3,sigma_mean=0.02),get_random(-0.6),get_random(0.05),1]
+    d1 = [200e-3,get_random(-0.4),get_random(0.05),1]
+    b2 = [get_random(-250e-3,sigma_mean=0.02),get_random(0.0),get_random(0.05),1]
+    d2 = [200e-3,get_random(0.4),get_random(0.05),1]
+    b3 = [get_random(-200e-3,sigma_mean=0.02),get_random(0.6),get_random(0.05),1]
 
     x = np.linspace(-1,1,100)
     physics_model['x'] = x
@@ -66,7 +66,7 @@ def calculate_2d_map(ind):
     physics_model['V'] = potential_profile.V_x_wire(x,physics_model['list_b'])
 
 
-    physics_model['K_onsite'] = get_random(25e-3)
+    physics_model['K_onsite'] = get_random(45e-3)
     physics_model['sigma'] = x[1] - x[0]
     physics_model['x_0'] = 0.1*(x[1] - x[0])
     physics_model['mu_l'] = (300.0e-3,300.1e-3)
