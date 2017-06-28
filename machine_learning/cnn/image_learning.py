@@ -1,4 +1,3 @@
-
 # learn the states of a double dot
 import numpy as np
 import tensorflow as tf
@@ -19,7 +18,7 @@ def cnn_model_fn(features,labels,mode):
     # Concolutional layer1
     conv1 = tf.layers.conv2d(
         inputs=input_layer,
-        filters=8,
+        filters=16,
         kernel_size=[5,5],
         padding="same",
         activation=tf.nn.relu)
