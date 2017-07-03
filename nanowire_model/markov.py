@@ -210,14 +210,17 @@ class Markov():
             diff_lead = v[0] - u[0] + v[-1] - u[-1]
             simple_prob = self.fermi(E_2 - E_1 + diff_lead*self.tf.mu_l[0],self.tf.kT)
         else:
+            # barrier case
             simple_prob = 1.0
+            tunnel_prob = self.calculate_tunnel_prob(u,v)
+            weight = simple_prob*tunnel_prob 
+            return weight
+
        
         tunnel_prob = self.calculate_tunnel_prob(u,v)
-        #tunnel_prob = 1
 
-        #attempt_rate = tunneling.calculate_attempt_rate(u,v,self.tf,self.tf_strategy)
-        #attempt_rate *= 100
-        attempt_rate = 1
+        attempt_rate = self.calculate_attempt_rate(u,v)
+        attempt_rate = 1.0
         
         weight = attempt_rate*tunnel_prob*simple_prob
         return weight
@@ -449,3 +452,63 @@ class Markov():
         
         tunnel_prob = np.exp(-scale*factor)
         return tunnel_prob
+
+    
+    def calculate_attempt_rate(self,v,u):
+        '''
+        Input:
+            v : start node
+            u : end node
+
+        Output:
+            attempt_rate : calculate simply as the semi-classical travel time
+        '''
+        v = np.array(v)
+        u = np.array(u)
+        diff = u - v
+        
+        # solve for start node state
+        N_dot = tuple(v[1:-1])
+        if (N_dot not in self.tf_solutions):
+            # solve tf for start node 
+            n,mu = self.tf.tf_iterative_solver_fixed_N(N_dot,strategy=self.tf_strategy)
+            E = self.tf.calculate_thomas_fermi_energy(n,mu)
+            self.tf_solutions[N_dot] = {'n':n,'mu':mu,'E':E}
+        else:
+            n = self.tf_solutions[N_dot]['n']
+            mu = self.tf_solutions[N_dot]['mu']
+            E = self.tf_solutions[N_dot]['E']
+
+        index_electron_to = np.argwhere(diff == 1.0)[0,0]
+        index_electron_from = np.argwhere(diff == -1.0)[0,0]
+
+        if index_electron_from == 0:  
+            #transport from leads
+            # calculate the attempt rate from the dot
+            index_electron_from = 1
+        elif index_electron_from == (len(v) - 1):  
+            #transport from leads
+            # calculate the attempt rate from the dot
+            index_electron_from = len(v) - 2
+        
+        v[index_electron_from] -= 1
+        N_dot_1 = tuple(v[1:-1]) 
+        if (N_dot_1 not in self.tf_solutions):
+            # solve tf for start node in the 1 less electron state 
+            n1,mu1 = self.tf.tf_iterative_solver_fixed_N(N_dot_1,strategy=self.tf_strategy)
+            E1 = self.tf.calculate_thomas_fermi_energy(n,mu)
+            self.tf_solutions[N_dot_1] = {'n':n1,'mu':mu1,'E':E1}
+        else:
+            n1 = self.tf_solutions[N_dot_1]['n']
+            mu1 = self.tf_solutions[N_dot_1]['mu']
+            E1 = self.tf_solutions[N_dot_1]['E']
+
+        # correct for the fact that leads are included in v
+        # so 1 = index_electron_from corresponds to 'd0'
+        dot_index = index_electron_from - 1
+        dot_key = 'd' + str(int(dot_index))
+        dot_begin = self.tf.mask.mask_info[dot_key][0]
+        dot_end = self.tf.mask.mask_info[dot_key][1]
+        attempt_rate = self.tf.attempt_rate_scale * np.sqrt(np.abs(mu[dot_index] - mu1[dot_index]))/(dot_end - dot_begin + 1) 
+
+        return attempt_rate

@@ -38,6 +38,7 @@ class Physics():
         # \sqrt(2 m_e)/h_bar * sqrt(E_scale) * dx_scale
         
         self.WKB_scale = np.sqrt(2*scipy.constants.m_e*scipy.constants.e) * (1.0e-9) / scipy.constants.hbar
+        self.attempt_rate_scale = np.sqrt(2*scipy.constants.e/scipy.constants.m_e) * 1e9
         
         self.kT = physics['kT']
         self.x = physics['x']

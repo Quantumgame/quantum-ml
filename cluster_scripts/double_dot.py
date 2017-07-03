@@ -79,7 +79,7 @@ def calculate_2d_map(ind):
     graph = markov.Markov(graph_model,physics_model,tf_strategy)
     graph.find_n_dot_estimate()
 
-    N_v = 100
+    N_v = 1000
     V_d_vec = np.linspace(50e-3,400e-3,N_v)
     output_vec = []
     input_vec = []
@@ -107,6 +107,6 @@ def calculate_2d_map(ind):
 
     import datetime
     dt = str(datetime.datetime.now()) 
-    np.save('/wrk/ssk4/datadump/double_dot_' + str(N_v) + '_grid_' + dt + '.npy',data)
+    np.save('/Users/sandesh/datadump/double_dot_' + str(N_v) + '_grid_' + dt + '.npy',data)
     
     return (time.time()-st)
