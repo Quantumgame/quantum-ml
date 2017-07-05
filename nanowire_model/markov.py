@@ -58,21 +58,7 @@ class Markov():
             self.recalculate_graph = True
 
         return self.start_node
-
-    #def find_tf_solutions(self):
-    #    '''
-    #    This function uses the self.start_node and the graph_model to precalculate the TF solutions.
-    #    The solutions are stored as a dict indexed by the N_dot values. Each value is itself a dict with n and mu stored.
-
-    #    The data is stored in self.tf_solutions
-    #    '''
-    #    if self.num_dot != 0:
-    #        self.tf_solutions = {}
-    #        N_est = self.start_node[1:-1]
-    #        p = self.graph_model[0]
-    #         
         
-    
     def check_validity(self, u):
         '''
         Input:
@@ -211,7 +197,7 @@ class Markov():
             simple_prob = self.fermi(E_2 - E_1 + diff_lead*self.tf.mu_l[0],self.tf.kT)
         else:
             # barrier case
-            simple_prob = 1.0
+            simple_prob = self.tf.QPC_current_scale
             tunnel_prob = self.calculate_tunnel_prob(u,v)
             weight = simple_prob*tunnel_prob 
             return weight
@@ -220,7 +206,6 @@ class Markov():
         tunnel_prob = self.calculate_tunnel_prob(u,v)
 
         attempt_rate = self.calculate_attempt_rate(u,v)
-        attempt_rate = 1.0
         
         weight = attempt_rate*tunnel_prob*simple_prob
         return weight
@@ -509,6 +494,7 @@ class Markov():
         dot_key = 'd' + str(int(dot_index))
         dot_begin = self.tf.mask.mask_info[dot_key][0]
         dot_end = self.tf.mask.mask_info[dot_key][1]
-        attempt_rate = self.tf.attempt_rate_scale * np.sqrt(np.abs(mu[dot_index] - mu1[dot_index]))/(dot_end - dot_begin + 1) 
-
+        attempt_rate = 1e-10*self.tf.attempt_rate_scale * np.sqrt(np.abs(100e-3)) / (dot_end - dot_begin + 1)
+        #attempt_rate = 1.0
+        
         return attempt_rate

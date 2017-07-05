@@ -22,6 +22,7 @@ class Physics():
     mu_l     : (mu_left,mu_right) 2-tuple for storing the lead potentials
     battery_weight : rate for transport throught a battery, set to a high number > 1000
     short_circuit_current : The current to be returned when there is no barrier in the device
+    QPC_current_scale : set the scale that it premultiplied to the tunnel probability when calculating current in the QPC region
     '''
 
     def __init__(self,physics):
@@ -37,8 +38,8 @@ class Physics():
         # set the WKB scale
         # \sqrt(2 m_e)/h_bar * sqrt(E_scale) * dx_scale
         
-        self.WKB_scale = np.sqrt(2*scipy.constants.m_e*scipy.constants.e) * (1.0e-9) / scipy.constants.hbar
-        self.attempt_rate_scale = np.sqrt(2*scipy.constants.e/scipy.constants.m_e) * 1e9
+        self.WKB_scale = np.sqrt(2*scipy.constants.m_e*scipy.constants.e) * (1.0e-9 * self.dx_scale) / scipy.constants.hbar
+        self.attempt_rate_scale = 2*np.sqrt(2*scipy.constants.e/scipy.constants.m_e) / (1e-9*self.dx_scale)
         
         self.kT = physics['kT']
         self.x = physics['x']
@@ -47,6 +48,7 @@ class Physics():
         self.K_onsite = physics['K_onsite']
         self.sigma = physics['sigma']
         self.x_0 = physics['x_0']
+        self.QPC_current_scale = physics['QPC_current_scale']
        
         # disabled for now. Otherwise battery nodes not identified. 
         #if mu_l[0] != mu_l[1]:
