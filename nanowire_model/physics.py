@@ -20,7 +20,7 @@ class Physics():
     x_0      : screening length in calculation of the K matrix
     K(x,x')  : 2D matrix for storing the interaction energy between points x and x',
     mu_l     : (mu_left,mu_right) 2-tuple for storing the lead potentials
-    battery_weight : rate for transport throught a battery, set to a high number > 1000
+    battery_weight : rate for transport throught a battery divided by attempt_rate_scale, set to a higher number > 1
     short_circuit_current : The current to be returned when there is no barrier in the device
     QPC_current_scale : set the scale that it premultiplied to the tunnel probability when calculating current in the QPC region
     '''
@@ -38,7 +38,7 @@ class Physics():
         # set the WKB scale
         # \sqrt(2 m_e)/h_bar * sqrt(E_scale) * dx_scale
         
-        self.WKB_scale = np.sqrt(2*scipy.constants.m_e*scipy.constants.e) * (1.0e-9 * self.dx_scale) / scipy.constants.hbar
+        self.WKB_scale = 2*np.sqrt(2*scipy.constants.m_e*scipy.constants.e) * (1.0e-9 * self.dx_scale) / scipy.constants.hbar
         self.attempt_rate_scale = 2*np.sqrt(2*scipy.constants.e/scipy.constants.m_e) / (1e-9*self.dx_scale)
         
         self.kT = physics['kT']
@@ -55,7 +55,7 @@ class Physics():
         #    raise ValueError("Finite bias calculation. Feature not yet available!") 
         
         self.mu_l = physics['mu_l']
-        self.battery_weight = physics['battery_weight']
+        self.battery_weight = physics['battery_weight'] * self.attempt_rate_scale
         self.short_circuit_current = physics['short_circuit_current']
         
         # The K-matrix is calculated only once. 

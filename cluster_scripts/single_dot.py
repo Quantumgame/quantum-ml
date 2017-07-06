@@ -56,8 +56,8 @@ def calculate_1d_map(ind=0):
     # multiple of eV
     physics_model['E_scale'] = 1
     # multiple of nm
-    physics_model['dx_scale'] = 1
-    physics_model['kT'] = 1000e-6
+    physics_model['dx_scale'] = 2
+    physics_model['kT'] = 350e-6
 
     # just initial param to generate the graph object
     b1 = [get_random(-200e-3,sigma_mean=0.02),get_random(-0.5),get_random(0.05),1]
@@ -86,7 +86,7 @@ def calculate_1d_map(ind=0):
     graph.find_n_dot_estimate()
 
     N_v = 1024
-    V_d_vec = np.linspace(0e-3,200e-3,N_v)
+    V_d_vec = np.linspace(50e-3,200e-3,N_v)
     
     output_vec = []
     for i in range(N_v):
@@ -94,6 +94,7 @@ def calculate_1d_map(ind=0):
         physics_model['list_b'] = [b1,d,b2]
         V = potential_profile.V_x_wire(x,physics_model['list_b'])
         physics_model['V'] = potential_profile.V_x_wire(x,[b1,d,b2])
+        #import pdb;pdb.set_trace()
         output_vec += [calculate_current((graph,physics_model))]
 
     # data is a dictionary with two keys, 'input' and 'output'

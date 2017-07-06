@@ -433,7 +433,7 @@ class Markov():
         factor = scipy.integrate.simps(np.sqrt(np.abs(V_eff[bar_begin:(bar_end+1)] - mu_e)),self.tf.x[bar_begin:(bar_end+1)])
 
         # calcualte the scale based on physics in self.tf
-        scale = self.tf.WKB_scale   
+        scale = 1*self.tf.WKB_scale   
         
         tunnel_prob = np.exp(-scale*factor)
         return tunnel_prob
@@ -494,7 +494,7 @@ class Markov():
         dot_key = 'd' + str(int(dot_index))
         dot_begin = self.tf.mask.mask_info[dot_key][0]
         dot_end = self.tf.mask.mask_info[dot_key][1]
-        attempt_rate = 1e-10*self.tf.attempt_rate_scale * np.sqrt(np.abs(100e-3)) / (dot_end - dot_begin + 1)
-        #attempt_rate = 1.0
+        attempt_rate = self.tf.attempt_rate_scale * np.sqrt(np.abs(mu[dot_index])) / (dot_end - dot_begin + 1)
+        #attempt_rate = 1e14
         
         return attempt_rate
