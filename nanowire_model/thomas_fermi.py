@@ -53,7 +53,7 @@ class ThomasFermi(Physics):
             elif (key == 'l1'):
                 mu_x[val[0]:val[1] + 1] = self.mu_l[1] 
             elif (key[0] == 'd'):
-                mu_x[val[0]:val[1] + 1] = mu_d[int(key[1:])]
+                mu_x[val[0]:(val[1] + 1)] = mu_d[int(key[1:])]
             else:
                 # region is a barrier
                 # leave untounced i.e = 0 since the potential over a barrier is an unknown
@@ -139,8 +139,8 @@ class ThomasFermi(Physics):
             # implement the n = 0 barrier constraint thorugh the Lagrange multipliers mu_bar
             if key[0] == 'b':
                 barrier_size = val[1] - val[0] + 1 
-                A[val[0]:val[0] + barrier_size,barrier_col_index:barrier_col_index + barrier_size ] = -1.0*np.identity(barrier_size)
-                A[barrier_col_index:barrier_col_index + barrier_size,val[0]:val[0] + barrier_size ] = np.identity(barrier_size)
+                A[val[0]:(val[0] + barrier_size),barrier_col_index:(barrier_col_index + barrier_size) ] = -1.0*np.identity(barrier_size)
+                A[barrier_col_index:(barrier_col_index + barrier_size),val[0]:(val[0] + barrier_size) ] = np.identity(barrier_size)
                 barrier_col_index += barrier_size
             
             # implement the sum_n over dot - N_d constraint
@@ -369,11 +369,12 @@ class ThomasFermi(Physics):
 
         E = V n + 1/2 n K n
         '''
-        N_d = self.calculate_N_d_from_n(n)
-        # mu_x with only the leads
-        mu_d_tmp = [0.0]*len(mu_d)
-        mu_x = self.calculate_mu_x_from_mask(mu_d_tmp)
-        E = np.sum((self.V - mu_x)*n) + 0.5 * np.sum(n*np.dot(self.K,n.T)) -0.0* np.sum(mu_d*N_d)
+        #n_without_leads = np.zeros(len(n))
+        #for i in range(len(n)):
+        #    if(self.mask.mask[i] != 'l'):
+        #        n_without_leads[i] = n[i]
+        n_without_leads = n
+        E = np.sum(self.V*n_without_leads) + 0.5 * np.sum(n_without_leads*np.dot(self.K,n_without_leads.T)) 
         return E
 
     def calculate_N_d_from_n(self,n):
@@ -388,5 +389,4 @@ class ThomasFermi(Physics):
             if key[0] == 'd':
                 dot_index = int(key[1:])
                 N_d[dot_index] = np.sum(n[val[0]:(val[1] + 1)])
-        
         return N_d

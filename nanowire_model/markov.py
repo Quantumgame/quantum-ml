@@ -193,8 +193,9 @@ class Markov():
                 mu_d_2 = self.tf_solutions[N_dot_2]['mu']
                 E_2 = self.tf_solutions[N_dot_2]['E']
             # change in number of electrons on the lead
-            diff_lead = v[0] - u[0] + v[-1] - u[-1]
-            simple_prob = self.fermi(E_2 - E_1 + diff_lead*self.tf.mu_l[0],self.tf.kT)
+            diff_lead0 = v[0] - u[0] 
+            diff_lead1 = v[-1] - u[-1]
+            simple_prob = self.fermi(E_2 - E_1 + diff_lead0*self.tf.mu_l[0] + diff_lead1*self.tf.mu_l[1],self.tf.kT)
         else:
             # barrier case
             simple_prob = self.tf.QPC_current_scale
@@ -206,7 +207,7 @@ class Markov():
         tunnel_prob = self.calculate_tunnel_prob(u,v)
 
         attempt_rate = self.calculate_attempt_rate(u,v)
-        
+      
         weight = attempt_rate*tunnel_prob*simple_prob
         return weight
         
@@ -241,13 +242,13 @@ class Markov():
             E = self.tf.calculate_thomas_fermi_energy(n,mu)
             self.tf_solutions[key] = {'n':n,'mu':mu,'E':E}
 
+        edge_attr = nx.get_edge_attributes(self.G,"battery_edge")
         for edge in self.G.edges():        
             # recalculate only the non-battery edges
-            if (not nx.get_edge_attributes(self.G,"battery_edge")[edge]):
+            if (not edge_attr[edge]):
                 u = edge[0]
                 v = edge[1]
                 self.G.add_edge(u,v,weight=self.find_weight(u,v))
-            
         return 
 
     def generate_graph(self):
@@ -295,7 +296,7 @@ class Markov():
         self.add_battery_edges()
         self.get_battery_nodes()
 
-        ## get the stable prob distribution
+        # get the stable prob distribution
         self.get_prob_dist()
 
     def get_battery_nodes(self):
@@ -326,7 +327,7 @@ class Markov():
         M =  A.T - np.diag(np.array(A.sum(axis=1)).reshape((A.shape[0])))
     
         try:
-            nullspace = rank_nullspace.nullspace(M,rtol=1e-9)  
+            nullspace = rank_nullspace.nullspace(M,rtol=1e-9,atol=1e-9)  
             if (nullspace.shape[1] > 0):
                 #non-trivial nullspace exists for M
                 # dist is prob distribution
@@ -377,6 +378,8 @@ class Markov():
         output['charge_state'] = self.get_charge_state()
         output['prob_dist'] = self.dist
         output['num_dot'] = self.num_dot
+        output['nodes'] = self.G.nodes(data=True)
+        output['edges'] = self.G.edges(data=True)
         if(self.num_dot == 0):
             output['state'] = "QPC"
         else:
@@ -396,9 +399,9 @@ class Markov():
         # Uses WKB method for the tunnel probability calculation 
 
         # find where the transition is occuring
-        u = np.array(u)
-        v = np.array(v)
-        diff = u - v
+        u_arr = np.array(u)
+        v_arr = np.array(v)
+        diff = u_arr - v_arr
 
         index_electron_to = np.argwhere(diff == 1.0)[0,0]
         index_electron_from = np.argwhere(diff == -1.0)[0,0]
@@ -407,7 +410,7 @@ class Markov():
         bar_index = np.floor(0.5*(index_electron_to + index_electron_from))
         bar_key = 'b' + str(int(bar_index))
        
-        N_dot = tuple(v[1:-1]) 
+        N_dot = tuple(v_arr[1:-1]) 
         if (N_dot not in self.tf_solutions):
             # solve tf for start node 
             n,mu = self.tf.tf_iterative_solver_fixed_N(N_dot,strategy=self.tf_strategy)
@@ -433,9 +436,10 @@ class Markov():
         factor = scipy.integrate.simps(np.sqrt(np.abs(V_eff[bar_begin:(bar_end+1)] - mu_e)),self.tf.x[bar_begin:(bar_end+1)])
 
         # calcualte the scale based on physics in self.tf
-        scale = 1*self.tf.WKB_scale   
+        scale = self.tf.WKB_scale   
         
         tunnel_prob = np.exp(-scale*factor)
+
         return tunnel_prob
 
     
@@ -448,12 +452,12 @@ class Markov():
         Output:
             attempt_rate : calculate simply as the semi-classical travel time
         '''
-        v = np.array(v)
-        u = np.array(u)
-        diff = u - v
+        v_arr = np.array(v)
+        u_arr = np.array(u)
+        diff = u_arr - v_arr
         
         # solve for start node state
-        N_dot = tuple(v[1:-1])
+        N_dot = tuple(v_arr[1:-1])
         if (N_dot not in self.tf_solutions):
             # solve tf for start node 
             n,mu = self.tf.tf_iterative_solver_fixed_N(N_dot,strategy=self.tf_strategy)
@@ -471,23 +475,11 @@ class Markov():
             #transport from leads
             # calculate the attempt rate from the dot
             index_electron_from = 1
-        elif index_electron_from == (len(v) - 1):  
+        elif index_electron_from == (len(v_arr) - 1):  
             #transport from leads
             # calculate the attempt rate from the dot
-            index_electron_from = len(v) - 2
+            index_electron_from = len(v_arr) - 2
         
-        v[index_electron_from] -= 1
-        N_dot_1 = tuple(v[1:-1]) 
-        if (N_dot_1 not in self.tf_solutions):
-            # solve tf for start node in the 1 less electron state 
-            n1,mu1 = self.tf.tf_iterative_solver_fixed_N(N_dot_1,strategy=self.tf_strategy)
-            E1 = self.tf.calculate_thomas_fermi_energy(n,mu)
-            self.tf_solutions[N_dot_1] = {'n':n1,'mu':mu1,'E':E1}
-        else:
-            n1 = self.tf_solutions[N_dot_1]['n']
-            mu1 = self.tf_solutions[N_dot_1]['mu']
-            E1 = self.tf_solutions[N_dot_1]['E']
-
         # correct for the fact that leads are included in v
         # so 1 = index_electron_from corresponds to 'd0'
         dot_index = index_electron_from - 1
@@ -495,6 +487,5 @@ class Markov():
         dot_begin = self.tf.mask.mask_info[dot_key][0]
         dot_end = self.tf.mask.mask_info[dot_key][1]
         attempt_rate = self.tf.attempt_rate_scale * np.sqrt(np.abs(mu[dot_index])) / (dot_end - dot_begin + 1)
-        #attempt_rate = 1e14
         
         return attempt_rate

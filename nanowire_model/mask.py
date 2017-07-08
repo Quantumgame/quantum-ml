@@ -13,7 +13,7 @@ class Mask:
 
     '''
 
-    def __init__(self,n,eps = 1e-5):
+    def __init__(self,n,eps = 1e-8):
         '''
         It takes in electron density and finds the mask and mask_info by itself without requiring explicit method calls.
         '''
@@ -22,13 +22,13 @@ class Mask:
         self.calculate_mask_from_n(n,eps)
         self.calculate_mask_info_from_mask()
 
-    def calculate_mask_from_n(self,n,eps=1e-5):
+    def calculate_mask_from_n(self,n,eps=1e-8):
         '''
         This function uses a preliminary idea that n > eps is a lead or a dot region, while the rest is a barrier.
         '''
         n = list(n) 
         # All regions are classified as a dot or a barrier. 
-        tmp_mask = ['d' if x > eps else 'b' for x in n ]
+        tmp_mask = ['d' if x > eps else 'b' for x in n]
         # Then the first and the last regions are labelled as leads.
         try:
             # Lead 0
@@ -36,8 +36,8 @@ class Mask:
             # The end of the lead 0 is found by finding the beginning of the first barrier.
             l0_end = tmp_mask.index('b') - 1
            
-             # + 1 has to be included since the end of the range is non-inclusive
-            tmp_mask[l0_start:l0_end + 1] = 'l' * (l0_end + 1 - l0_start)
+            # + 1 has to be included since the end of the range is non-inclusive
+            tmp_mask[l0_start:(l0_end + 1)] = 'l' * (l0_end + 1 - l0_start)
 
             # Lead 1
             l1_end = len(tmp_mask) - 1
@@ -47,7 +47,7 @@ class Mask:
             l1_start = len(tmp_mask) - tmp_mask[::-1].index('b')  
             
             # + 1 has to be included since the end of the range is non-inclusive
-            tmp_mask[l1_start:l1_end + 1] = 'l' * (l1_end + 1 - l1_start)
+            tmp_mask[l1_start:(l1_end + 1)] = 'l' * (l1_end + 1 - l1_start)
         except ValueError:
            raise exceptions.NoBarrierState
 

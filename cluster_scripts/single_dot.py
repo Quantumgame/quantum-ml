@@ -71,7 +71,7 @@ def calculate_1d_map(ind=0):
 
         
     # K_onsite decides the charging energy
-    physics_model['K_onsite'] = np.random.uniform(10e-3,50e-3)
+    physics_model['K_onsite'] = np.random.uniform(15e-3,15e-3)
     physics_model['sigma'] = x[1] - x[0]
     physics_model['x_0'] = 0.1*(x[1] - x[0])
     physics_model['mu_l'] = (100.0e-3,100.1e-3)

@@ -35,12 +35,14 @@ class Physics():
         '''
         self.E_scale = physics['E_scale']
         self.dx_scale = physics['dx_scale']
+
         # set the WKB scale
         # \sqrt(2 m_e)/h_bar * sqrt(E_scale) * dx_scale
-        
         self.WKB_scale = 2*np.sqrt(2*scipy.constants.m_e*scipy.constants.e) * (1.0e-9 * self.dx_scale) / scipy.constants.hbar
+       
+        # attempt_rate is the inverse of classical electron speed, with energy being equal to the chemical potential.
         self.attempt_rate_scale = 2*np.sqrt(2*scipy.constants.e/scipy.constants.m_e) / (1e-9*self.dx_scale)
-        
+       
         self.kT = physics['kT']
         self.x = physics['x']
         self.list_b = physics['list_b']
