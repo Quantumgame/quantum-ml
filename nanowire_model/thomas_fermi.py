@@ -240,7 +240,7 @@ class ThomasFermi(Physics):
         '''
 
         def energy(n,V,mu_x,K):
-            return np.sum((V - mu_x)*n) + 0.5*np.sum(n*np.dot(K,n))
+            return np.sum((V - 0.0*mu_x)*n) + 0.5*np.sum(n*np.dot(K,n))
       
         def dot_constraint_function(n,mask,N_d):
             err = 0.0

@@ -6,7 +6,7 @@ import sys
 import os
 import time
 
-sys.path.append('/Users/ssk4/quantum-ml/nanowire_model')
+sys.path.append('/Users/sandesh/quantum-ml/nanowire_model')
 import physics
 import potential_profile
 import markov
@@ -66,7 +66,7 @@ def calculate_2d_map(ind=0):
     
     b1 = [-200e-3,-0.6,0.05,1]
     d1 = [200e-3,-0.2,0.05,1]
-    b2 = [-250e-3,0.0,0.05,1]
+    b2 = [-350e-3,0.0,0.05,1]
     d2 = [200e-3,0.2,0.05,1]
     b3 = [-200e-3,0.6,0.05,1]
 
@@ -76,24 +76,24 @@ def calculate_2d_map(ind=0):
     physics_model['V'] = potential_profile.V_x_wire(x,physics_model['list_b'])
 
 
-    physics_model['K_onsite'] = np.random.uniform(5e-3,5e-3)
+    physics_model['K_onsite'] = np.random.uniform(25e-3,25e-3)
     physics_model['sigma'] = x[1] - x[0]
-    physics_model['x_0'] = 0.001*(x[1] - x[0])
+    physics_model['x_0'] = 0.1*(x[1] - x[0])
     physics_model['mu_l'] = (300.01e-3,300.0e-3)
     physics_model['battery_weight'] = 100
     physics_model['short_circuit_current'] = 1
     physics_model['QPC_current_scale'] = 1e-4
     
     graph_model = (1,1)
-    tf_strategy = 'simple'
+    tf_strategy = 'opt'
 
     graph = markov.Markov(graph_model,physics_model,tf_strategy)
     graph.find_n_dot_estimate()
 
-    N_v = 25
+    N_v = 100
 
-    V_d1_vec = np.linspace(50e-3,300e-3,N_v)
-    V_d2_vec = np.linspace(50e-3,300e-3,N_v)
+    V_d1_vec = np.linspace(200e-3,300e-3,N_v)
+    V_d2_vec = np.linspace(200e-3,300e-3,N_v)
     output_vec = []
     
     for i in range(N_v):
@@ -119,9 +119,9 @@ def calculate_2d_map(ind=0):
     
     import datetime
     dt = str(datetime.datetime.now()) 
-    #np.save('/Users/ssk4/data/double_dot_' + str(N_v) + '_grid_' + dt + '.npy',data)
+    #np.save('/Users/sandesh/data/double_dot_' + str(N_v) + '_grid_' + dt + '.npy',data)
     # during testing
-    np.save('/Users/ssk4/data/double_dot_test1.npy',data)
+    np.save('/Users/sandesh/data/double_dot_test1.npy',data)
     
     return (time.time()-st)
 
