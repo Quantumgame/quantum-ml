@@ -59,6 +59,7 @@ class Physics():
         self.mu_l = physics['mu_l']
         self.battery_weight = physics['battery_weight'] * self.attempt_rate_scale
         self.short_circuit_current = physics['short_circuit_current']
+        self.t = physics['t']
         
         # The K-matrix is calculated only once. 
         self.calculate_K_matrix(self.x,self.K_onsite,self.sigma,self.x_0)
@@ -76,4 +77,6 @@ class Physics():
         K(x1,x2) = K_onsite / sqrt((x1 - x2)^2 + sigma^2) * np.exp(-abs(x1-x2)/x_0)
         '''
         dx = np.abs(x[:,np.newaxis] - x)
-        self.K = (K_onsite * np.exp(-1.0*dx/x_0))/np.sqrt(dx**2 + sigma**2)
+
+        # adding a diagonal element 2t to model KE in 2 dimensions
+        self.K = (K_onsite * np.exp(-1.0*dx/x_0))/np.sqrt(dx**2 + sigma**2) + 2*self.t * np.eye(len(x))

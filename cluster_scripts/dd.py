@@ -6,7 +6,7 @@ import sys
 import os
 import time
 
-sys.path.append('/Users/sandesh/quantum-ml/nanowire_model')
+sys.path.append('/Users/sandesh/repos/quantum-ml/nanowire_model')
 import physics
 import potential_profile
 import markov
@@ -76,21 +76,22 @@ def calculate_2d_map(ind=0):
     physics_model['V'] = potential_profile.V_x_wire(x,physics_model['list_b'])
 
 
-    physics_model['K_onsite'] = np.random.uniform(25e-3,25e-3)
+    physics_model['K_onsite'] = np.random.uniform(5e-3,5e-3)
     physics_model['sigma'] = x[1] - x[0]
-    physics_model['x_0'] = 0.1*(x[1] - x[0])
+    physics_model['x_0'] = 50*(x[1] - x[0])
     physics_model['mu_l'] = (300.01e-3,300.0e-3)
     physics_model['battery_weight'] = 100
     physics_model['short_circuit_current'] = 1
     physics_model['QPC_current_scale'] = 1e-4
+    physics_model['t'] = 10e-3
     
     graph_model = (1,1)
-    tf_strategy = 'opt'
+    tf_strategy = 'simple'
 
     graph = markov.Markov(graph_model,physics_model,tf_strategy)
     graph.find_n_dot_estimate()
 
-    N_v = 100
+    N_v = ind
 
     V_d1_vec = np.linspace(200e-3,300e-3,N_v)
     V_d2_vec = np.linspace(200e-3,300e-3,N_v)
@@ -149,7 +150,7 @@ def calculate_3d_map(ind=0):
 
     physics_model['K_onsite'] = np.random.uniform(5e-3,25e-3)
     physics_model['sigma'] = x[1] - x[0]
-    physics_model['x_0'] = 0.01*(x[1] - x[0])
+    physics_model['x_0'] = 1*(x[1] - x[0])
     physics_model['mu_l'] = (300.1e-3,300.0e-3)
     physics_model['battery_weight'] = 10
     physics_model['short_circuit_current'] = 1
