@@ -1,12 +1,13 @@
 # Function to create a potential profile 
 import numpy as np
 
-def wire_profile(x,param):
+def wire1_profile(x,param):
     '''
     V(x-mean) = peak * log(sqrt(h^2 + x^2)/rho)
     '''
     (peak,mean,h,rho) = param
-    return peak*np.log((1.0/(rho))*np.sqrt((x-mean)**2 + h**2))
+    dx = np.abs(x-mean)
+    return peak*np.log((1.0/(rho))*np.sqrt(dx**2 + h**2))*np.exp(-dx/(0.1*h))
 
 def V_x_wire(x,list_b):
     '''
@@ -22,3 +23,13 @@ def V_x_wire(x,list_b):
     V = np.sum(wire_profiles,axis=0)
         
     return V
+
+def wire_profile(x,param):
+    '''
+    V(x-mean) = peak * log(sqrt(h^2 + x^2)/rho)
+    '''
+    (peak,mean,h,rho) = param
+    dx = np.abs(x-mean)
+    screen = 0.1
+    return (peak/np.log(h/rho))*np.log(np.sqrt(dx**2 + h**2)/rho)*np.exp(-dx/screen)
+
