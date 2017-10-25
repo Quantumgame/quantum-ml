@@ -4,7 +4,8 @@
 # (a) electron density calculations
 # (b) transport calculations using a Master equation
 
-# Last Updated : 12th October 2017
+# Last Updated : 14th October 2017
+# Corner cases in barrier and short circuit cases were resolved.
 # Sandesh Kalantre
 
 import numpy as np
@@ -118,6 +119,8 @@ class ThomasFermi():
             islands.pop(-1)
         
         self.islands = islands
+
+
         return self.islands
     
     def calc_barriers(self):
@@ -131,6 +134,10 @@ class ThomasFermi():
             bar_end = self.all_islands[i+1][0] - 1
             self.barriers.append([bar_start,bar_end])
         
+        # barrier
+        if(len(self.barriers) == 1):
+            self.state = "Barrier"
+        
         return self.barriers
     
     def calc_WKB_prob(self):
@@ -138,7 +145,9 @@ class ThomasFermi():
         For each barrier, WKB probability can be defined. A vector of these probabilies is calculated and 
         stored as self.p_WKB.
         '''
-       
+        if (self.state == "ShortCircuit"):
+            return      
+ 
         self.p_WKB = []
        
         x = self.physics['x'] 
@@ -349,7 +358,7 @@ class ThomasFermi():
         return self.dist
     
     def calc_graph_charge(self):
-        if (self.state != "ShortCircuit"):
+        if (self.state != "ShortCircuit" and self.state != "Barrier"):
             max_index = np.argmax(self.dist)
             return self.G.nodes()[max_index]
         else:
@@ -409,9 +418,8 @@ class ThomasFermi():
         #Short circuit
         if self.state == "ShortCircuit":
             return self.physics['ShortCircuitCurrent']
-        
         #single barrier
-        elif len(self.islands) == 0:
+        elif self.state == "Barrier":
             I = self.p_WKB[0] * self.physics['barrier_tunnel_rate']*self.dfermi(self.physics['bias'])*self.physics['bias']
         # else dots
         else:
