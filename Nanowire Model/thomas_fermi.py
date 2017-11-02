@@ -4,8 +4,8 @@
 # (a) electron density calculations
 # (b) transport calculations using a Master equation
 
-# Last Updated : 14th October 2017
-# Corner cases in barrier and short circuit cases were resolved.
+# Last Updated : 2nd November 2017
+# Added code to calculate the charge centres and the charge sensor output
 # Sandesh Kalantre
 
 import numpy as np
@@ -193,6 +193,13 @@ class ThomasFermi():
 
         return self.charges
 
+    def calc_charge_centers(self):
+        self.charge_centres = []
+        for item in self.islands:
+            self.charge_centres.append(self.physics['x'][item[0] + np.argmax(self.n[item[0]:(item[1] + 1)])])
+
+        return self.charge_centres
+
     def calc_cap_model(self):
         islands = self.islands
         n = self.n
@@ -360,7 +367,8 @@ class ThomasFermi():
     def calc_graph_charge(self):
         if (self.state != "ShortCircuit" and self.state != "Barrier"):
             max_index = np.argmax(self.dist)
-            return self.G.nodes()[max_index]
+            self.graph_charge = self.G.nodes()[max_index]
+            return self.graph_charge
         else:
             return 0.0
     
@@ -428,3 +436,25 @@ class ThomasFermi():
             I = self.calc_graph_current()
             
         return I
+
+    def calc_sensor(self):
+        '''
+        This function calculates the output of the charge sensor as the Coulomb potential from the charge islands evaluated at the sensor location."
+        '''
+        # this array has the position of the sensors
+        pos_sensors = self.physics['sensors']
+        self.sensor_output = []
+
+        def calc_single_sensor(pos):
+            (x,y) = pos 
+            output = 0
+            for i in range(len(self.islands)):
+                x_i = self.charge_centres[i]
+                output += self.graph_charge[i]/np.sqrt((x-x_i)**2 + y**2) 
+
+            return output
+
+        for pos in pos_sensors:
+           self.sensor_output.append(calc_single_sensor(pos)) 
+
+        return self.sensor_output
