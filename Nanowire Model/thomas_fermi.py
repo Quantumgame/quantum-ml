@@ -146,7 +146,7 @@ class ThomasFermi():
         stored as self.p_WKB.
         '''
         if (self.state == "ShortCircuit"):
-            return      
+            return [0.0]     
  
         self.p_WKB = []
        
@@ -368,9 +368,9 @@ class ThomasFermi():
         if (self.state != "ShortCircuit" and self.state != "Barrier"):
             max_index = np.argmax(self.dist)
             self.graph_charge = self.G.nodes()[max_index]
-            return self.graph_charge
         else:
-            return 0.0
+            self.graph_charge = [0.0]
+        return self.graph_charge
     
     def calc_graph_current(self):
         mu_L = self.physics['mu_L']
@@ -441,6 +441,9 @@ class ThomasFermi():
         '''
         This function calculates the output of the charge sensor as the Coulomb potential from the charge islands evaluated at the sensor location."
         '''
+        if (self.state == "ShortCircuit" or self.state == "Barrier"):
+            self.sensor_output = np.zeros(len(self.physics['sensors']))
+            return self.sensor_output
         # this array has the position of the sensors
         pos_sensors = self.physics['sensors']
         self.sensor_output = []
@@ -458,3 +461,8 @@ class ThomasFermi():
            self.sensor_output.append(calc_single_sensor(pos)) 
 
         return self.sensor_output
+    def calc_state(self):
+        if (self.state != "ShortCircuit" and self.state != "Barrier"):
+            return str(len(self.islands)) + "Dot"
+        else:
+            return self.state
