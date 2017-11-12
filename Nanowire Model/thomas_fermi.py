@@ -14,6 +14,23 @@ import  networkx as nx
 import mpmath
 import itertools
 
+def calc_K_mat(x,K_0,sigma):
+    '''
+    Calculates the Coulomb interaction matrix
+    Input:
+    x : x linspace
+    K_0 : Strength of the interaction
+    sigma : softening parameter
+    
+    Output:
+    K_matrix : matrix elements K(x,x')
+    '''
+    dx = np.sqrt((x - x[:,np.newaxis])**2 + sigma**2)
+    # sigma in the numerator is added for normalisation, so that value at x = 0 is same irrespective of change
+    # in sigma
+    K_matrix = K_0*sigma/dx 
+    return K_matrix 
+
 class ThomasFermi():
     '''
     Thomas-Fermi routines based on the polylog function approach.
@@ -25,33 +42,29 @@ class ThomasFermi():
         
         x : 1d grid 
         V : potential profile
-        K_0 : strength of the Coulomb interaction
-        sigma : softening paramter for Coulomb interaction matrix
-        mu : chemical potential (assumed to be equal for both leads)
+        K_mat : Coulomb matrix
+        mu : Fermi level (assumed to be equal for both leads)
+        V_L : voltage applied to left lead
+        V_R : voltage applied to right lead
         D : dimension of the problem to be used in the electron density integral
         g_0 : coefficient of the density of states
         beta : used for self-consistent calculation of n(x)
-        kT : temperature of the system, required for the Fermi integral
+        kT : temperature of the system used in the transport calculations
         '''
         self.physics = physics
-        self.K_mat = self.calc_K_mat()
-        self.state = ""
-        self.physics['mu_L'] = 0.5*self.physics['bias']
-        self.physics['mu_R'] = - 0.5*self.physics['bias']
-
-    def calc_K_mat(self):
-        x = self.physics['x']
-        K_0 = self.physics['K_0']
-        sigma = self.physics['sigma']
-        
-        dx = np.sqrt((x - x[:,np.newaxis])**2 + sigma**2)
-        # sigma in the numerator is added for normalisation, so that value at x = 0 is same irrespective of change
-        # in sigma
-        return K_0*sigma/dx
+        # initialize all variables for clarity and to avoid edge cases
+        self.n = []
+        self.all_islands = []
+        self.islands = []
+        self.barriers = []
+        self.p_WKB = []
+        self.charges = []
+        self.cap_model = []
+        self.state = None
 
     def calc_n(self):
         V = self.physics['V']
-        K_mat = self.K_mat
+        K_mat = self.physics['K_mat']
         D = self.physics['D']
         g_0 = self.physics['g_0']
         beta = self.physics['beta']
@@ -112,14 +125,13 @@ class ThomasFermi():
         if(len(islands) == 1):
             # short-circuit condition
             islands.pop(0)
-            self.state = "ShortCircuit"
+            self.state = -1
         # if left and right leads are present 
         elif(islands[0][0] == 0 and islands[-1][1] == len(n) - 1):
             islands.pop(0)
             islands.pop(-1)
         
         self.islands = islands
-
 
         return self.islands
     
@@ -136,7 +148,7 @@ class ThomasFermi():
         
         # barrier
         if(len(self.barriers) == 1):
-            self.state = "Barrier"
+            self.state = 0 
         
         return self.barriers
     
@@ -145,7 +157,7 @@ class ThomasFermi():
         For each barrier, WKB probability can be defined. A vector of these probabilies is calculated and 
         stored as self.p_WKB.
         '''
-        if (self.state == "ShortCircuit"):
+        if (self.state == -1):
             return [0.0]     
  
         self.p_WKB = []
@@ -154,9 +166,10 @@ class ThomasFermi():
         V = self.physics['V']
         mu = self.physics['mu']
         WKB_coeff = self.physics['WKB_coeff']
+        K_mat = self.physics['K_mat']
        
         # in order to handle negative values near the boundaries, I have put in abs
-        k = WKB_coeff*np.sqrt(np.abs(V + np.dot(self.K_mat,self.n) - mu))
+        k = WKB_coeff*np.sqrt(np.abs(V + np.dot(K_mat,self.n) - mu))
         for i in range(len(self.barriers)):
             bar_start = self.barriers[i][0]
             bar_end = self.barriers[i][1]
@@ -215,13 +228,14 @@ class ThomasFermi():
         c_k = self.physics['c_k']
         mu = self.physics['mu']
         Z = self.charges
+        K_mat = self.physics['K_mat']
         
         def cap_func(i,j):
             energy = 0.0
             if i == j:
                 energy += c_k*np.sum(n_list[i]*n_list[i]) 
 
-            energy += 0.5*np.dot(np.dot(n_list[i].T,self.K_mat),n_list[j])
+            energy += 0.5*np.dot(np.dot(n_list[i].T,K_mat),n_list[j])
             return energy
 
         # 1e-6 added to prevent blowup of the capacitance matrix near zero
@@ -284,8 +298,8 @@ class ThomasFermi():
         E_u = self.calc_cap_energy(np.array(u))
         E_v = self.calc_cap_energy(np.array(v))
       
-        mu_L = self.physics['mu_L']
-        mu_R = self.physics['mu_R']
+        mu_L = self.physics['V_L']
+        mu_R = self.physics['V_R']
         if(len(self.islands) == 1):
             if diff in [[1.0]]:
                 weight = self.p_WKB[0]*self.fermi(E_v - E_u - mu_L) + self.p_WKB[1]*self.fermi(E_v - E_u - mu_R)
@@ -365,16 +379,17 @@ class ThomasFermi():
         return self.dist
     
     def calc_graph_charge(self):
-        if (self.state != "ShortCircuit" and self.state != "Barrier"):
+        if (self.state != -1 and self.state != 0):
             max_index = np.argmax(self.dist)
-            self.graph_charge = self.G.nodes()[max_index]
+            graph_charge = self.G.nodes()[max_index]
         else:
-            self.graph_charge = [0.0]
-        return self.graph_charge
+            graph_charge = [0.0]
+        self.graph_charge = graph_charge
     
     def calc_graph_current(self):
-        mu_L = self.physics['mu_L']
-        mu_R = self.physics['mu_R']
+        mu_L = self.physics['V_L']
+        mu_R = self.physics['V_R']
+        
         if(len(self.islands) == 1):
             current = 0.0
             u = self.start_node
@@ -418,51 +433,66 @@ class ThomasFermi():
                     current += -1.0*Gamma*self.dist[index]
                 else:
                     current += 0
-            self.current = current
-                    
-        return self.current
+        return current
         
     def calc_current(self):
         #Short circuit
-        if self.state == "ShortCircuit":
-            return self.physics['ShortCircuitCurrent']
+        if self.state == -1:
+            current = self.physics['short_circuit_current']
         #single barrier
-        elif self.state == "Barrier":
-            I = self.p_WKB[0] * self.physics['barrier_tunnel_rate']*self.dfermi(self.physics['bias'])*self.physics['bias']
+        elif self.state == 0:
+            current = self.physics['barrier_current']* self.p_WKB[0] * self.physics['barrier_tunnel_rate']*self.dfermi(self.physics['bias'])*self.physics['bias']
         # else dots
         else:
             self.create_graph()
             self.calc_stable_dist()
-            I = self.calc_graph_current()
-            
-        return I
+            current = self.calc_graph_current()
+        self.current = current 
 
     def calc_sensor(self):
         '''
         This function calculates the output of the charge sensor as the Coulomb potential from the charge islands evaluated at the sensor location."
         '''
-        if (self.state == "ShortCircuit" or self.state == "Barrier"):
-            self.sensor_output = np.zeros(len(self.physics['sensors']))
-            return self.sensor_output
-        # this array has the position of the sensors
-        pos_sensors = self.physics['sensors']
-        self.sensor_output = []
-
-        def calc_single_sensor(pos):
-            (x,y) = pos 
-            output = 0
-            for i in range(len(self.islands)):
-                x_i = self.charge_centres[i]
-                output += self.graph_charge[i]/np.sqrt((x-x_i)**2 + y**2) 
-
-            return output
-
-        for pos in pos_sensors:
-           self.sensor_output.append(calc_single_sensor(pos)) 
-
-        return self.sensor_output
-    def calc_state(self):
-        if (self.state != "ShortCircuit" and self.state != "Barrier"):
-            return str(len(self.islands)) + "Dot"
+        if (self.state == -1 or self.state == 0):
+            sensor_output = np.zeros(len(self.physics['sensors']))
         else:
-            return self.state
+            # this array has the position of the sensors
+            pos_sensors = self.physics['sensors']
+            sensor_output = []
+
+            def calc_single_sensor(pos):
+                (x,y) = pos 
+                output = 0
+                for i in range(len(self.islands)):
+                    x_i = self.charge_centres[i]
+                    output += self.graph_charge[i]/np.sqrt((x-x_i)**2 + y**2) 
+                return output
+
+            for pos in pos_sensors:
+                sensor_output.append(calc_single_sensor(pos)) 
+        self.sensor_output = sensor_output
+
+    def calc_state(self):
+        if (self.state != -1 and self.state != 0):
+            self.state = len(self.islands)
+    
+    def output_wrapper(self):
+        '''
+        This function does all the required functions once the class is initialized and returns an output dictionary.
+        '''
+        self.calc_n()
+        self.calc_islands()
+        self.calc_barriers()
+        self.calc_WKB_prob()
+        self.calc_charges()
+        self.calc_charge_centers()
+        self.calc_cap_model()
+        self.calc_stable_config()
+        self.calc_state()
+        self.calc_current()
+        self.calc_graph_charge()
+        self.calc_sensor()
+        
+        output = {'cap_model' : self.cap_model,'tunnel_vec' : self.p_WKB, 'current' : self.current,'charge' : self.graph_charge,'sensor' : self.sensor_output, 'state' : self.state}
+        
+        return output
