@@ -71,10 +71,14 @@ class ThomasFermi():
         mu = self.physics['mu']
         
         def polylog_f(x):
-            np_polylog = np.frompyfunc(mpmath.polylog, 2, 1)
-            output = -g_0*np_polylog(D-1,-np.exp(beta*x))
+            #np_polylog = np.frompyfunc(mpmath.polylog, 2, 1)
+            #output = -(g_0/beta)*np_polylog(D-1,-np.exp(beta*x))
             # cast from mpc array to numpy array
-            return np.array(list(map(lambda x : complex(x),output)))
+            #return np.array(list(map(lambda x : complex(x),output)))
+            
+            #? Faster implementation
+            output = (g_0/beta) * np.log(1 + np.exp(beta * x))
+            return output
         
         n = np.zeros(len(V))
         n_prev = np.zeros(len(V))

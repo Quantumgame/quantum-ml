@@ -33,44 +33,45 @@ def randomize_dict(dictionary,keys = []):
 
 def calc_input_physics():
     N_grid = 100
-    system_size = 60
+    system_size = 300
     x = np.linspace(-system_size/2,system_size/2,N_grid,endpoint=True)
 
     physics = {'x' : x,
-               'K_0' : random_sample(1e-2), 
+               'K_0' : random_sample(1e-1), 
                'sigma' : 1.0,
                'mu' : 0.1,
                'D' : 2,
-               'g_0' : 5e-2,
+               'g_0' : 1e0,
                'c_k' : random_sample(1e-3),
-               'beta' : 50,
-               'kT' : 1e-5,
-               'WKB_coeff' : 1,
+               'beta' : 1000,
+               'kT' : 1e-4,
+               'WKB_coeff' : 0.1,
                'barrier_tunnel_rate' : 10.0,
                'V_L' : 5e-5,
                'V_R' : -5e-5,
-               'short_circuit_current' : 1.0,
+               'short_circuit_current' : 1e-3,
                'attempt_rate_coef' : 1,
                'sensors' : [(0,50)],
-               'barrier_current' : 1.0,
+               'barrier_current' : 1e-3,
                }
     K_mat = thomas_fermi.calc_K_mat(x,physics['K_0'],physics['sigma'])
     physics['K_mat'] = K_mat
+    physics['bias'] = physics['V_L'] - physics['V_R']
     return physics
 
 
 def calc_plunger_trace(N_v = 100):
     physics = calc_input_physics()
     
-    gate1 = {'peak' : 200e-3,'mean' : -15,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
-    gate2 = {'peak' : -150e-3,'mean' : 0,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
-    gate3 = {'peak' : 200e-3,'mean' : 15,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
+    gate1 = {'peak' : 210e-3,'mean' : -100,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
+    gate2 = {'peak' : 0e-3,'mean' : 0,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
+    gate3 = {'peak' : 210e-3,'mean' : 100,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
     gates = [gate1,gate2,gate3]
     # randomize over the elements of the gates
     for i in range(len(gates)):
         gates[i] = randomize_dict(gates[i])
     
-    V_P_vec = np.linspace(-100e-3,-200e-3,N_v)
+    V_P_vec = np.linspace(800e-3,-250e-3,N_v)
 
     def wrapper(V_p):
         '''
@@ -90,20 +91,20 @@ def calc_plunger_trace(N_v = 100):
     np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),result)
     return result 
 
-def calc_barrier_map(N_v = 100,V_p = -150e-3):
+def calc_barrier_map(N_v = 100,V_p = 300e-3):
     physics = calc_input_physics()
     
-    gate1 = {'peak' : 200e-3,'mean' : -15,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
-    gate2 = {'peak' : -150e-3,'mean' : 0,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
-    gate3 = {'peak' : 200e-3,'mean' : 15,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
+    gate1 = {'peak' : 200e-3,'mean' : -100,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
+    gate2 = {'peak' : V_p,'mean' : 0,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
+    gate3 = {'peak' : 200e-3,'mean' : 100,'rho' : 50, 'h' : 25,'screen' : 50,'alpha' : 1.0}
     
     gates = [gate1,gate2,gate3]
     # randomize over the elements of the gates
     for i in range(len(gates)):
         gates[i] = randomize_dict(gates[i])
         
-    V_B1_vec = np.linspace(150e-3,300e-3,N_v)
-    V_B2_vec = np.linspace(150e-3,300e-3,N_v)
+    V_B1_vec = np.linspace(100e-3,600e-3,N_v)
+    V_B2_vec = np.linspace(100e-3,600e-3,N_v)
     V_B_map = list(itertools.product(V_B1_vec,V_B2_vec))
 
     def wrapper(V_gate):
@@ -118,7 +119,7 @@ def calc_barrier_map(N_v = 100,V_p = -150e-3):
         output = tf.output_wrapper()
         return output
     
-    output_vec = [wrapper(y) for y in V_P_vec]
+    output_vec = [wrapper(y) for y in V_B_map]
 
     result = {'physics' : physics, 'type' : 'V_B_map', 'V_B1_vec' : V_B1_vec,'V_B2_vec' : V_B2_vec, 'output' : output_vec}
     np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),result)
@@ -154,7 +155,7 @@ def calc_full_map(N_v = 100):
         output = tf.output_wrapper()
         return output
     
-    output_vec = [wrapper(y) for y in V_P_vec]
+    output_vec = [wrapper(y) for y in V_map]
 
     result = {'physics' : physics, 'type' : 'V_full_map', 'V_B1_vec' : V_B1_vec,'V_P_vec' : V_P_vec,'V_B2_vec' : V_B2_vec,\
               'output' : output_vec}
