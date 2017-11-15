@@ -38,13 +38,13 @@ def calc_input_physics():
 
     physics = {'x' : x,
                'K_0' : random_sample(1e-2), 
-               'sigma' : 2.0,
+               'sigma' : 3.0,
                'mu' : 0.1,
                'D' : 2,
                'g_0' : 6e0,
                'c_k' : random_sample(1e-3),
                'beta' : 1000,
-               'kT' : 1e-5,
+               'kT' : 5e-5,
                'WKB_coeff' : 0.1,
                'barrier_tunnel_rate' : 10.0,
                'V_L' : 5e-5,
@@ -131,9 +131,9 @@ def calc_full_map(N_v = 100):
     for key,item in gates.items():
         gates[key] = randomize_dict(gates[key])
         
-    V_B1_vec = np.linspace(50e-3,150e-3,N_v) 
+    V_B1_vec = np.linspace(100e-3,150e-3,N_v) 
     V_P_vec = np.linspace(50e-3,150e-3,N_v) 
-    V_B2_vec = np.linspace(50e-3,150e-3,N_v) 
+    V_B2_vec = np.linspace(100e-3,150e-3,N_v) 
     V_map = list(itertools.product(V_B1_vec,V_P_vec,V_B2_vec))
 
     def wrapper(V_gate):
