@@ -95,48 +95,48 @@ class ThomasFermi():
                 #print("Done in",i)
                 break;
         self.n = np.real(n)
+        # filter the very low electron density points
+        threshold_indices = self.n < 1e-10
+        self.n[threshold_indices] = 0
         return self.n
 
-    def calc_islands(self):
+    def calc_islands_and_barriers(self):
         n = self.n
         # adaptive eps makes the calculation more robust 
         n_eps = 1e-1*np.max(n)
         
-        n_chop = np.array([x if x > n_eps else 0.0 for x in n])
-        islands = []
-        start = False
-        islands_index = 0
-        left = 0
-        for i in range(len(n_chop)):
-            if(n_chop[i] > 0.0 and not start):
-                start = True
-                left = i
-            if(n_chop[i] == 0.0 and start):
-                start = False
-                islands.append([left,i - 1])
-                islands_index += 1
-            if((i == (len(n_chop) - 1)) and start):
-                start = False
-                islands.append([left,i])
-                islands_index += 1
+        n_chop = np.concatenate(([0],np.array([1 if x > n_eps else 0.0 for x in n]),[0]))
+        # replace non-zero elements by 1
+        n_diff = np.abs(np.diff(n_chop))
+        islands = np.where(n_diff == 1)[0].reshape(-1, 2)
+        
+        n_chop_bar = np.concatenate(([0],np.array([0 if x > n_eps else 1 for x in n]),[0]))
+        n_diff = np.abs(np.diff(n_chop_bar))
+        barriers = np.where(n_diff == 1)[0].reshape(-1, 2)
+        
        
         # has to be copy since I will be popping off elemets from the islands list
         self.all_islands = islands.copy()
         # ignore the leads
         # in case the leads are absent, their absence is ignored
        
-        # The system is short-circuited is only one island is present. 
-        if(len(islands) == 1):
-            # short-circuit condition
+        # The system is a complete barrier with no islands, n = 0 
+        islands = list(islands)
+        if(len(islands) == 0):
+            self.state = 0
+        elif(len(islands) == 1 and islands[0][0] == 0 and islands[0][1] == (len(n))):
+            # short-circuit condition with electron density all over
             islands.pop(0)
             self.state = -1
         # if left and right leads are present 
-        elif(islands[0][0] == 0 and islands[-1][1] == len(n) - 1):
+        if(islands != [] and islands[0][0] == 0):
             islands.pop(0)
+        if(islands != [] and islands[-1][1] == (len(n))):
             islands.pop(-1)
         
         self.islands = islands
-
+        self.barriers = barriers
+        
         return self.islands
     
     def calc_barriers(self):
@@ -145,10 +145,27 @@ class ThomasFermi():
             The start and end locations are inclusive.
         '''
         self.barriers = []
-        for i in range(len(self.all_islands)-1):
-            bar_start = self.all_islands[i][1] + 1
-            bar_end = self.all_islands[i+1][0] - 1
-            self.barriers.append([bar_start,bar_end])
+        if self.state != -1:
+            # two kinds of islands, leads present and absent
+            if len(self.all_islands) == len(self.islands):
+                for i in range(len(self.all_islands)+1): 
+                    if i == 0:
+                        bar_start = 0 
+                        bar_end = self.all_islands[i][0] - 1
+                        self.barriers.append([bar_start,bar_end])
+                    elif i == (len(self.all_islands)):
+                        bar_start = self.all_islands[i-1][0] + 1
+                        bar_end = len(self.n)
+                        self.barriers.append([bar_start,bar_end])
+                    else:
+                        bar_start = self.all_islands[i][1] + 1
+                        bar_end = self.all_islands[i+1][0] - 1
+                        self.barriers.append([bar_start,bar_end])
+            else:
+                for i in range(len(self.all_islands)-1):
+                    bar_start = self.all_islands[i][1] + 1
+                    bar_end = self.all_islands[i+1][0] - 1
+                    self.barriers.append([bar_start,bar_end])
         
         # barrier
         if(len(self.barriers) == 1):
@@ -237,7 +254,7 @@ class ThomasFermi():
         def cap_func(i,j):
             energy = 0.0
             if i == j:
-                energy += c_k*np.sum(n_list[i]*n_list[i]) 
+                energy += c_k*np.sum(n_list[i]*n_list[i]) #+ 0*np.sum((V - mu)*n_list[i])
 
             energy += 0.5*np.dot(np.dot(n_list[i].T,K_mat),n_list[j])
             return energy
@@ -485,8 +502,7 @@ class ThomasFermi():
         This function does all the required functions once the class is initialized and returns an output dictionary.
         '''
         self.calc_n()
-        self.calc_islands()
-        self.calc_barriers()
+        self.calc_islands_and_barriers()
         self.calc_WKB_prob()
         self.calc_charges()
         self.calc_charge_centers()

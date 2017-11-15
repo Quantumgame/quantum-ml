@@ -4,7 +4,7 @@
 # development since the data generation scripts might be dependent on this.
 # Use the "Test Notebooks" folder instead.
 
-# Last Updated : 11th November 2017
+# Last Updated : 14th November 2017
 # Sandesh Kalantre
 
 import numpy as np
@@ -50,4 +50,4 @@ def calc_V(x,gate_param_list):
     Output: V
     linear sum of potentials calculated for each gate
     '''
-    return np.sum([calc_V_gate(x,y) for y in gate_param_list],axis=0)
+    return np.sum([calc_V_gate(x,y) for key,y in gate_param_list.items()],axis=0)
