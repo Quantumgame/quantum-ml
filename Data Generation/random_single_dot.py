@@ -13,6 +13,7 @@ import itertools
 import potential_profile
 import thomas_fermi
 
+# either modify this path or change while calling the function
 data_path = "/Users/sandesh/data/quantum-ml/single_dot/"
 
 def random_sample(mean,sigma_mu = 0.001):
@@ -31,6 +32,13 @@ def randomize_dict(dictionary,keys = []):
             dictionary[key] = random_sample(dictionary[key])
     return dictionary
 
+def calc_gates():
+    gate1 = {'peak' : 200e-3,'mean' : -20,'rho' : 5, 'h' :50,'screen' : 20,'alpha' : 1.0}
+    gate2 = {'peak' : 0e-3,'mean' : 0,'rho' : 5, 'h' : 50,'screen' : 20,'alpha' : 1.0}
+    gate3 = {'peak' : 200e-3,'mean' : 20,'rho' : 5, 'h' : 50,'screen' : 20,'alpha' : 1.0}
+    gates = {'gate1' : gate1,'gate2' : gate2, 'gate3' : gate3}
+    return gates
+
 def calc_input_physics():
     N_grid = 100
     system_size = 80
@@ -41,11 +49,11 @@ def calc_input_physics():
                'sigma' : 3.0,
                'mu' : 0.1,
                'D' : 2,
-               'g_0' : 6e0,
+               'g_0' : np.random.uniform(0.1,1),
                'c_k' : random_sample(1e-3),
                'beta' : 1000,
                'kT' : 5e-5,
-               'WKB_coeff' : 0.1,
+               'WKB_coeff' : 0.5,
                'barrier_tunnel_rate' : 10.0,
                'V_L' : 5e-5,
                'V_R' : -5e-5,
@@ -53,35 +61,30 @@ def calc_input_physics():
                'attempt_rate_coef' : 1,
                'sensors' : [(0,50)],
                'barrier_current' : 1e-3,
+               'sensor_gate_coeff' : 1e-1,
                }
     K_mat = thomas_fermi.calc_K_mat(x,physics['K_0'],physics['sigma'])
     physics['K_mat'] = K_mat
     physics['bias'] = physics['V_L'] - physics['V_R']
     return physics
 
-def calc_gates():
-    gate1 = {'peak' : 100e-3,'mean' : -20,'rho' : 20, 'h' :50,'screen' : 10,'alpha' : 1.0}
-    gate2 = {'peak' : 0e-3,'mean' : 0,'rho' : 20, 'h' : 50,'screen' : 10,'alpha' : 1.0}
-    gate3 = {'peak' : 100e-3,'mean' : 20,'rho' : 20, 'h' : 50,'screen' : 10,'alpha' : 1.0}
-    gates = {'gate1' : gate1,'gate2' : gate2, 'gate3' : gate3}
-    return gates
-
-def calc_plunger_trace(N_v = 100):
+def calc_plunger_trace(N_v = 100,data_path=data_path):
     physics = calc_input_physics()
     gates = calc_gates()
     # randomize over the elements of the gates
     for key,item in gates.items():
         gates[key] = randomize_dict(gates[key])
     
-    V_P_vec = np.linspace(300e-3,-700e-3,N_v)
+    V_P_vec = np.linspace(-400e-3,0,N_v)
 
     def wrapper(V_p):
         '''
-        Set the voltage for the plunger
+        Set the voltage for the plunger and calculate the outputs
         '''
         gates['gate2']['peak'] = V_p
         V = potential_profile.calc_V(physics['x'],gates) 
         physics['V'] = V
+        physics['gates'] = gates
         
         tf = thomas_fermi.ThomasFermi(physics)
         output = tf.output_wrapper()
@@ -93,7 +96,7 @@ def calc_plunger_trace(N_v = 100):
     np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),result)
     return result 
 
-def calc_barrier_map(N_v = 100,V_p = -100e-3):
+def calc_barrier_map(N_v = 100,V_p = -100e-3,data_path=data_path):
     physics = calc_input_physics()
     gates = calc_gates() 
     # randomize over the elements of the gates
@@ -123,7 +126,7 @@ def calc_barrier_map(N_v = 100,V_p = -100e-3):
     np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),result)
     return result 
 
-def calc_full_map(N_v = 100):
+def calc_full_map(N_v = 100,data_path = data_path):
     physics = calc_input_physics()
     gates = calc_gates() 
     
