@@ -42,14 +42,22 @@ class ThomasFermi():
         
         x : 1d grid 
         V : potential profile
+        K_0 : Strength of the interaction
+        sigma : softening parameter
         K_mat : Coulomb matrix
         mu : Fermi level (assumed to be equal for both leads)
         V_L : voltage applied to left lead
         V_R : voltage applied to right lead
-        D : dimension of the problem to be used in the electron density integral
+        D : dimension of the problem to be used in the electron density integral, (only when polylogarithm function is used to calculate the electron density, for a 2DEG a direct analytic integral of the Fermi function is used) 
         g_0 : coefficient of the density of states
-        beta : used for self-consistent calculation of n(x)
+        beta : effective temp. used for self-consistent calculation of n(x)
         kT : temperature of the system used in the transport calculations
+       'WKB_coeff' : it goes in the exponent while calculating the WKB probability, sets the strength of WKB tunneling
+       'barrier_tunnel_rate' : a tunnel rate set when the device is in barrier mode while calcualting the tunnel prob
+       'barrier_current' : a scale for the current set to the device when in barrier mode
+       'short_circuit_current' : an arbitrary high current value given to the device when in open/short circuit mode,
+       'attempt_rate_coef' : controls the strength of the attempt rate factor,
+       'sensors' : a list of tuples [(x,y)], where (x,y) is the position of the charge sensor in the 2DEG plane
         '''
         self.physics = physics
         # initialize all variables for clarity and to avoid edge cases
@@ -63,6 +71,9 @@ class ThomasFermi():
         self.state = None
 
     def calc_n(self):
+        '''
+        Calcuates the electron density n(x) using a ThomasFermi model.
+        '''
         V = self.physics['V']
         K_mat = self.physics['K_mat']
         D = self.physics['D']
@@ -71,14 +82,15 @@ class ThomasFermi():
         mu = self.physics['mu']
         
         def polylog_f(x):
-            #np_polylog = np.frompyfunc(mpmath.polylog, 2, 1)
-            #output = -(g_0/beta)*np_polylog(D-1,-np.exp(beta*x))
-            # cast from mpc array to numpy array
-            #return np.array(list(map(lambda x : complex(x),output)))
-            
-            #? Faster implementation
-            output = (g_0/beta) * np.log(1 + np.exp(beta * x))
-            return output
+            if D != 2:
+                # note that this is very slow since the polylog is not optimzed
+                np_polylog = np.frompyfunc(mpmath.polylog, 2, 1)
+                output = -(g_0/beta)*np_polylog(D-1,-np.exp(beta*x))
+                # cast from mpc array to numpy array
+                return np.array(list(map(lambda x : complex(x),output)))
+            else:
+                output = (g_0/beta) * np.log(1 + np.exp(beta * x))
+                return output
         
         n = np.zeros(len(V))
         n_prev = np.zeros(len(V))
@@ -102,6 +114,7 @@ class ThomasFermi():
 
     def calc_islands_and_barriers(self):
         n = self.n
+        # n_eps sets the scale below which an island is assumed to end
         # adaptive eps makes the calculation more robust 
         n_eps = 1e-1*np.max(n)
         
@@ -120,15 +133,17 @@ class ThomasFermi():
         # ignore the leads
         # in case the leads are absent, their absence is ignored
        
-        # The system is a complete barrier with no islands, n = 0 
         islands = list(islands)
+        
+        # certain edge cases handled here
         if(len(islands) == 0):
+            # The system is a complete barrier with no islands, n = 0 
             self.state = 0
         elif(len(islands) == 1 and islands[0][0] == 0 and islands[0][1] == (len(n))):
             # short-circuit condition with electron density all over
             islands.pop(0)
             self.state = -1
-        # if left and right leads are present 
+        # if left and right leads are present, they are popped off since they do not form quantum dot islands 
         if(islands != [] and islands[0][0] == 0):
             islands.pop(0)
         if(islands != [] and islands[-1][1] == (len(n))):
@@ -138,40 +153,6 @@ class ThomasFermi():
         self.barriers = barriers
         
         return self.islands
-    
-    def calc_barriers(self):
-        '''
-            Calculates the locations of the barriers once the self.islands dictionary has been set. 
-            The start and end locations are inclusive.
-        '''
-        self.barriers = []
-        if self.state != -1:
-            # two kinds of islands, leads present and absent
-            if len(self.all_islands) == len(self.islands):
-                for i in range(len(self.all_islands)+1): 
-                    if i == 0:
-                        bar_start = 0 
-                        bar_end = self.all_islands[i][0] - 1
-                        self.barriers.append([bar_start,bar_end])
-                    elif i == (len(self.all_islands)):
-                        bar_start = self.all_islands[i-1][0] + 1
-                        bar_end = len(self.n)
-                        self.barriers.append([bar_start,bar_end])
-                    else:
-                        bar_start = self.all_islands[i][1] + 1
-                        bar_end = self.all_islands[i+1][0] - 1
-                        self.barriers.append([bar_start,bar_end])
-            else:
-                for i in range(len(self.all_islands)-1):
-                    bar_start = self.all_islands[i][1] + 1
-                    bar_end = self.all_islands[i+1][0] - 1
-                    self.barriers.append([bar_start,bar_end])
-        
-        # barrier
-        if(len(self.barriers) == 1):
-            self.state = 0 
-        
-        return self.barriers
     
     def calc_WKB_prob(self):
         '''
