@@ -13,9 +13,9 @@ import itertools
 import potential_profile
 import thomas_fermi
 
-data_path = "/Users/sandesh/data/quantum-ml/double_dot/"
+data_path = "/Users/sandesh/data/quantum-ml/double_dot_mac/"
 
-def random_sample(mean,sigma_mu = 0.1):
+def random_sample(mean,sigma_mu = 0.05):
     return np.random.normal(mean,sigma_mu*np.abs(mean))
 
 def randomize_dict(dictionary,keys = []):
@@ -41,11 +41,11 @@ def calc_input_physics():
                'sigma' : 3.0,
                'mu' : 0.1,
                'D' : 2,
-               'g_0' : np.random.uniform(1e0,3),
+               'g_0' : np.random.uniform(0.5,1.5),
                'c_k' : random_sample(1e-3),
                'beta' : 1000,
                'kT' : 5e-5,
-               'WKB_coeff' : 0.1,
+               'WKB_coeff' : 0.5,
                'barrier_tunnel_rate' : 10.0,
                'V_L' : 5e-5,
                'V_R' : -5e-5,
@@ -53,31 +53,33 @@ def calc_input_physics():
                'attempt_rate_coef' : 1,
                'sensors' : [(-20,50),(20,50)],
                'barrier_current' : 1e-3,
+               'sensor_gate_coeff' : 1e-1,
                }
+    
     K_mat = thomas_fermi.calc_K_mat(x,physics['K_0'],physics['sigma'])
     physics['K_mat'] = K_mat
     physics['bias'] = physics['V_L'] - physics['V_R']
     return physics
 
 def calc_gates():
-    gate1 = {'peak' : 200e-3,'mean' : -40,'rho' : 5, 'h' : 50,'screen' : 25,'alpha' : 1.0}
-    gate2 = {'peak' : -100e-3,'mean' : -20,'rho' : 5, 'h' : 50,'screen' : 25,'alpha' : 1.0}
-    gate3 = {'peak' : 150e-3,'mean' : 0,'rho' : 5, 'h' : 50,'screen' : 25,'alpha' : 1.0}
-    gate4 = {'peak' : -100e-3,'mean' : 20,'rho' : 5, 'h' : 50,'screen' : 25,'alpha' : 1.0}
-    gate5 = {'peak' : 200e-3,'mean' : 40,'rho' : 5, 'h' : 50,'screen' : 25,'alpha' : 1.0}
+    gate1 = {'peak' : 200e-3,'mean' : -40,'rho' : 5, 'h' : 50,'screen' : 20,'alpha' : 1.0}
+    gate2 = {'peak' : -100e-3,'mean' : -20,'rho' : 5, 'h' : 50,'screen' : 20,'alpha' : 1.0}
+    gate3 = {'peak' : 200e-3,'mean' : 0,'rho' : 5, 'h' : 50,'screen' : 20,'alpha' : 1.0}
+    gate4 = {'peak' : -100e-3,'mean' : 20,'rho' : 5, 'h' : 50,'screen' : 20,'alpha' : 1.0}
+    gate5 = {'peak' : 200e-3,'mean' : 40,'rho' : 5, 'h' : 50,'screen' : 20,'alpha' : 1.0}
     gates = {'gate1' : gate1,'gate2' : gate2, 'gate3' : gate3, 'gate4' : gate4, 'gate5' : gate5}
     return gates
 
 
-def calc_plunger_map(N_v = 100):
+def calc_plunger_map(N_v = 100,data_path=data_path):
     physics = calc_input_physics()
     gates = calc_gates() 
     # randomize over the elements of the gates
     for key,item in gates.items():
         gates[key] = randomize_dict(gates[key])
         
-    V_P1_vec = np.linspace(-50e-3,-200e-3,N_v)
-    V_P2_vec = np.linspace(-50e-3,-200e-3,N_v)
+    V_P1_vec = np.linspace(-0e-3,-400e-3,N_v)
+    V_P2_vec = np.linspace(-0e-3,-400e-3,N_v)
     V_P_map = list(itertools.product(V_P1_vec,V_P2_vec))
 
     def wrapper(V_gate):
@@ -87,6 +89,7 @@ def calc_plunger_map(N_v = 100):
         
         V = potential_profile.calc_V(physics['x'],gates) 
         physics['V'] = V
+        physics['gates'] = gates
         
         tf = thomas_fermi.ThomasFermi(physics)
         output = tf.output_wrapper()
@@ -95,7 +98,7 @@ def calc_plunger_map(N_v = 100):
     output_vec = [wrapper(y) for y in V_P_map]
 
     result = {'physics' : physics, 'type' : 'V_P_map', 'V_P1_vec' : V_P1_vec,'V_P2_vec' : V_P2_vec, 'output' : output_vec}
-    np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),result)
+    np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f"),result)
     return result 
 
 
