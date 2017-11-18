@@ -93,7 +93,7 @@ def calc_plunger_trace(N_v = 100,data_path=data_path):
     output_vec = [wrapper(y) for y in V_P_vec]
 
     result = {'physics' : physics, 'type' : 'V_P_trace', 'V_P_vec' : V_P_vec, 'output' : output_vec}
-    np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),result)
+    np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f"),result)
     return result 
 
 def calc_barrier_map(N_v = 100,V_p = -100e-3,data_path=data_path):
@@ -115,6 +115,7 @@ def calc_barrier_map(N_v = 100,V_p = -100e-3,data_path=data_path):
         
         V = potential_profile.calc_V(physics['x'],gates) 
         physics['V'] = V
+        physics['gates'] = gates
         
         tf = thomas_fermi.ThomasFermi(physics)
         output = tf.output_wrapper()
@@ -123,7 +124,7 @@ def calc_barrier_map(N_v = 100,V_p = -100e-3,data_path=data_path):
     output_vec = [wrapper(y) for y in V_B_map]
 
     result = {'physics' : physics, 'type' : 'V_B_map', 'V_B1_vec' : V_B1_vec,'V_B2_vec' : V_B2_vec, 'output' : output_vec}
-    np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),result)
+    np.save(data_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f"),result)
     return result 
 
 def calc_full_map(N_v = 100,data_path = data_path):
@@ -147,6 +148,7 @@ def calc_full_map(N_v = 100,data_path = data_path):
         
         V = potential_profile.calc_V(physics['x'],gates) 
         physics['V'] = V
+        physics['gates'] = gates
         
         tf = thomas_fermi.ThomasFermi(physics)
         output = tf.output_wrapper()
@@ -156,6 +158,6 @@ def calc_full_map(N_v = 100,data_path = data_path):
 
     result = {'physics' : physics, 'type' : 'V_full_map', 'V_B1_vec' : V_B1_vec,'V_P_vec' : V_P_vec,'V_B2_vec' : V_B2_vec,\
               'output' : output_vec}
-    np.save(data_path + "full_map" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),result)
+    np.save(data_path + "full_map" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f"),result)
     return result 
 
