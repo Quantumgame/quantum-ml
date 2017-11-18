@@ -4,15 +4,17 @@
 # (a) electron density calculations
 # (b) transport calculations using a Master equation
 
-# Last Updated : 2nd November 2017
+# Last Updated : 18th November 2017
 # Added code to calculate the charge centres and the charge sensor output
 # Sandesh Kalantre
 
 import numpy as np
 import scipy.special
-import  networkx as nx
+import networkx as nx
 import mpmath
 import itertools
+
+import potential_profile
 
 def calc_K_mat(x,K_0,sigma):
     '''
@@ -42,6 +44,7 @@ class ThomasFermi():
         
         x : 1d grid 
         V : potential profile
+        gates : dictionary of paramters defining the gates
         K_0 : Strength of the interaction
         sigma : softening parameter
         K_mat : Coulomb matrix
@@ -52,12 +55,13 @@ class ThomasFermi():
         g_0 : coefficient of the density of states
         beta : effective temp. used for self-consistent calculation of n(x)
         kT : temperature of the system used in the transport calculations
-       'WKB_coeff' : it goes in the exponent while calculating the WKB probability, sets the strength of WKB tunneling
-       'barrier_tunnel_rate' : a tunnel rate set when the device is in barrier mode while calcualting the tunnel prob
-       'barrier_current' : a scale for the current set to the device when in barrier mode
-       'short_circuit_current' : an arbitrary high current value given to the device when in open/short circuit mode,
-       'attempt_rate_coef' : controls the strength of the attempt rate factor,
-       'sensors' : a list of tuples [(x,y)], where (x,y) is the position of the charge sensor in the 2DEG plane
+        WKB_coeff : it goes in the exponent while calculating the WKB probability, sets the strength of WKB tunneling
+        barrier_tunnel_rate : a tunnel rate set when the device is in barrier mode while calcualting the tunnel prob
+        barrier_current : a scale for the current set to the device when in barrier mode
+        short_circuit_current : an arbitrary high current value given to the device when in open/short circuit mode,
+        attempt_rate_coef : controls the strength of the attempt rate factor,
+        sensors : a list of tuples [(x,y)], where (x,y) is the position of the charge sensor in the 2DEG plane
+        sensor_gate_coeff : weight applied while including the potential of the gate in calculating the sensor output 
         '''
         self.physics = physics
         # initialize all variables for clarity and to avoid edge cases
@@ -68,6 +72,11 @@ class ThomasFermi():
         self.p_WKB = []
         self.charges = []
         self.cap_model = []
+        
+        # the state is an integer
+        # -1 : short circuit
+        # 0 : barrier
+        # m : number of islands
         self.state = None
 
     def calc_n(self):
@@ -159,11 +168,10 @@ class ThomasFermi():
         For each barrier, WKB probability can be defined. A vector of these probabilies is calculated and 
         stored as self.p_WKB.
         '''
+        # if the state is a short circuit, then a default rate is set
         if (self.state == -1):
             return [0.0]     
  
-        self.p_WKB = []
-       
         x = self.physics['x'] 
         V = self.physics['V']
         mu = self.physics['mu']
@@ -177,7 +185,6 @@ class ThomasFermi():
             bar_end = self.barriers[i][1]
             prob = np.exp(-2*scipy.integrate.simps(k[bar_start:(bar_end + 1)],x[bar_start:(bar_end + 1)]))
             
-           
             self.p_WKB.append(prob)
             
         # calculate attempt rates only if islands are present
@@ -191,9 +198,14 @@ class ThomasFermi():
                         *1/np.sqrt(mu)*self.physics['attempt_rate_coef'] 
                 rate = 1/attempt_time
                 attempt_rate.append(rate)
-            # include for leads as well
-            attempt_rate_vec = np.array([attempt_rate[0]] + attempt_rate)
+            # for each island, there are two barriers
+            # the attempt rate is both tunneling probabilities of the two barriers is set equal to island formed by the barriers
+            # for a barrier enclosed by two islands, the average attempt rate is used of the two islands
+            attempt_rate_vec_left = np.array([attempt_rate[0]] + attempt_rate)
+            attempt_rate_vec_right = np.array(attempt_rate + [attempt_rate[0]])
+            attempt_rate_vec = 0.5*(attempt_rate_vec_left + attempt_rate_vec_right)
             self.p_WKB = attempt_rate_vec*self.p_WKB
+            
         return self.p_WKB
         
     def calc_charges(self):
@@ -235,8 +247,7 @@ class ThomasFermi():
         def cap_func(i,j):
             energy = 0.0
             if i == j:
-                energy += c_k*np.sum(n_list[i]*n_list[i]) #+ 0*np.sum((V - mu)*n_list[i])
-
+                energy += c_k*np.sum(n_list[i]*n_list[i]) 
             energy += 0.5*np.dot(np.dot(n_list[i].T,K_mat),n_list[j])
             return energy
 
@@ -468,6 +479,11 @@ class ThomasFermi():
                 for i in range(len(self.islands)):
                     x_i = self.charge_centres[i]
                     output += self.graph_charge[i]/np.sqrt((x-x_i)**2 + y**2) 
+                    
+                # include the effect from the gates
+                for key,gate in self.physics['gates'].items():
+                    dist = np.sqrt(x**2 + y**2)
+                    output += self.physics['sensor_gate_coeff']*potential_profile.calc_V_gate(dist,gate)
                 return output
 
             for pos in pos_sensors:
