@@ -366,11 +366,11 @@ class ThomasFermi():
             self.G.add_node(tuple(np.array(self.start_node) + [1,-1]))
             self.G.add_node(tuple(np.array(self.start_node) + [-1,1]))
             
-            for node in self.G.nodes():
+            for node in list(self.G.nodes()):
                 if node[0] < 0 or node[1] < 0:
                     self.G.remove_node(node)
-        for x in self.G.nodes():
-            for y in self.G.nodes():
+        for x in list(self.G.nodes()):
+            for y in list(self.G.nodes()):
                 self.G.add_edge(x,y,weight=self.calc_weight(x,y))
         return
     
@@ -394,7 +394,7 @@ class ThomasFermi():
     def calc_graph_charge(self):
         if (self.state != -1 and self.state != 0):
             max_index = np.argmax(self.dist)
-            graph_charge = self.G.nodes()[max_index]
+            graph_charge = list(self.G.nodes())[max_index]
         else:
             graph_charge = [0.0]
         self.graph_charge = graph_charge
@@ -418,9 +418,9 @@ class ThomasFermi():
             GammaL_Nminus = self.p_WKB[0]*self.fermi(E_u - E_minus - mu_L)
             GammaL_Nminus_r = self.p_WKB[0]*(1 - self.fermi(E_u - E_minus - mu_L))
 
-            index_start_node = self.G.nodes().index(self.start_node)
-            index_plus = self.G.nodes().index(plus)
-            index_minus = self.G.nodes().index(minus)
+            index_start_node = list(self.G.nodes()).index(self.start_node)
+            index_plus = list(self.G.nodes()).index(plus)
+            index_minus = list(self.G.nodes()).index(minus)
             current = self.dist[index_minus]*GammaL_Nminus \
                            + self.dist[index_start_node]*(GammaL_Nplus - GammaL_Nminus_r) \
                            -  self.dist[index_plus]*GammaL_Nplus_r
@@ -435,14 +435,14 @@ class ThomasFermi():
                     E_v = self.calc_cap_energy(np.array(v))
                     
                     Gamma = self.p_WKB[0]*self.fermi(E_v - E_u - mu_L)
-                    index = self.G.nodes().index(u)
+                    index = list(self.G.nodes()).index(u)
                     current += Gamma*self.dist[index]
                 elif diff in [[-1,0]]:
                     E_u = self.calc_cap_energy(np.array(u))
                     E_v = self.calc_cap_energy(np.array(v))
                     
                     Gamma = self.p_WKB[0]*(1 - self.fermi(E_u - E_v - mu_L))
-                    index = self.G.nodes().index(u)
+                    index = list(self.G.nodes()).index(u)
                     current += -1.0*Gamma*self.dist[index]
                 else:
                     current += 0
