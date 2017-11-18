@@ -16,7 +16,7 @@ import thomas_fermi
 # either modify this path or change while calling the function
 data_path = "/Users/sandesh/data/quantum-ml/single_dot/"
 
-def random_sample(mean,sigma_mu = 0.001):
+def random_sample(mean,sigma_mu = 0.05):
     return np.random.normal(mean,sigma_mu*np.abs(mean))
 
 def randomize_dict(dictionary,keys = []):
