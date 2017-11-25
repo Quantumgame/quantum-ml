@@ -49,7 +49,8 @@ def calc_input_physics():
                'sigma' : 3.0,
                'mu' : 0.1,
                'D' : 2,
-               'g_0' : np.random.uniform(0.1,1),
+               #'g_0' : np.random.uniform(0.1,1),
+               'g_0' : random_sample(0.5),
                'c_k' : random_sample(1e-3),
                'beta' : 1000,
                'kT' : 5e-5,
@@ -75,7 +76,7 @@ def calc_plunger_trace(N_v = 100,data_path=data_path):
     for key,item in gates.items():
         gates[key] = randomize_dict(gates[key])
     
-    V_P_vec = np.linspace(-400e-3,0,N_v)
+    V_P_vec = np.linspace(-350e-3,0,N_v)
 
     def wrapper(V_p):
         '''
