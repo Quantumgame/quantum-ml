@@ -78,8 +78,8 @@ def calc_plunger_map(N_v = 100,data_path=data_path):
     for key,item in gates.items():
         gates[key] = randomize_dict(gates[key])
         
-    V_P1_vec = np.linspace(-80e-3,-210e-3,N_v)
-    V_P2_vec = np.linspace(-80e-3,-210e-3,N_v)
+    V_P1_vec = np.linspace(-0e-3,-400e-3,N_v)
+    V_P2_vec = np.linspace(-0e-3,-400e-3,N_v)
     V_P_map = list(itertools.product(V_P1_vec,V_P2_vec))
 
     def wrapper(V_gate):
