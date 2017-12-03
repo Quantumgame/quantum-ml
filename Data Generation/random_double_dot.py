@@ -15,7 +15,7 @@ import thomas_fermi
 
 data_path = "/Users/sandesh/data/quantum-ml/double_dot_mac/"
 
-def random_sample(mean,sigma_mu = 0.05):
+def random_sample(mean,sigma_mu = 0.0001):
     return np.random.normal(mean,sigma_mu*np.abs(mean))
 
 def randomize_dict(dictionary,keys = []):
@@ -41,7 +41,7 @@ def calc_input_physics():
                'sigma' : 3.0,
                'mu' : 0.1,
                'D' : 2,
-               'g_0' : np.random.uniform(0.5,1.5),
+               'g_0' : np.random.uniform(1.0),
                'c_k' : random_sample(1e-3),
                'beta' : 1000,
                'kT' : 5e-5,
@@ -78,8 +78,8 @@ def calc_plunger_map(N_v = 100,data_path=data_path):
     for key,item in gates.items():
         gates[key] = randomize_dict(gates[key])
         
-    V_P1_vec = np.linspace(-0e-3,-400e-3,N_v)
-    V_P2_vec = np.linspace(-0e-3,-400e-3,N_v)
+    V_P1_vec = np.linspace(-80e-3,-210e-3,N_v)
+    V_P2_vec = np.linspace(-80e-3,-210e-3,N_v)
     V_P_map = list(itertools.product(V_P1_vec,V_P2_vec))
 
     def wrapper(V_gate):
